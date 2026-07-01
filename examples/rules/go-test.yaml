@@ -1,0 +1,11 @@
+rules:
+  - name: fail-line
+    pattern: '^--- FAIL: (.+)$'
+    groups:
+      "1": test-name
+
+  - name: panic
+    pattern: '(panic:)(.*)$'
+    groups:
+      "1": error
+      "2": detail

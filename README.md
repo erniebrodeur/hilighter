@@ -2,6 +2,49 @@
 
 `hilighter` is a Go CLI for colorizing streamed text with user-defined regex rules. It is built for `stdout` and `stderr` style workflows where you want expressive highlighting without baking ANSI escape codes into the source text.
 
+## Install
+
+Install the CLI:
+
+```bash
+go install github.com/erniebrodeur/hilighter/cmd/hilighter@latest
+```
+
+If you want the module in another Go project:
+
+```bash
+go get github.com/erniebrodeur/hilighter
+```
+
+## Configuration
+
+The default per-user config directory is:
+
+```bash
+~/.hilighter
+```
+
+The intended layout is:
+
+```text
+~/.hilighter/
+├── config.yaml
+├── rules.yaml
+└── themes/
+    └── default.yaml
+```
+
+`config.yaml` is the place for default overrides such as which rules file or theme file should be used by default.
+
+Example:
+
+```yaml
+rules: ~/.hilighter/rules.yaml
+theme: ~/.hilighter/themes/default.yaml
+```
+
+You can also point the CLI at explicit files with flags such as `--rules`, `--theme`, or override the base config directory with `--config-dir`.
+
 ## What It Does
 
 - reads text from a stream or command output
@@ -13,8 +56,8 @@
 ## Intended Usage
 
 ```bash
-some-command 2>&1 | hilighter --rules examples/rules/go-test.yaml
-hilighter --cmd "some-command 2>&1" --rules examples/rules/go-test.yaml
+some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
+hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
 ```
 
 Pipe mode is the primary use case. Command mode exists for convenience.

@@ -1,0 +1,5 @@
+# Default hilighter configuration.
+# Override these paths when you want to use files outside ~/.hilighter.
+
+rules: ~/.hilighter/rules.yaml
+theme: ~/.hilighter/themes/default.yaml

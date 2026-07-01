@@ -1,0 +1,8 @@
+styles:
+  error:
+    fg: pink
+    bold: true
+  detail:
+    fg: white
+  test-name:
+    fg: green

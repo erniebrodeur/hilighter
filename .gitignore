@@ -6,6 +6,7 @@ hilighter
 bin/
 dist/
 build/
+.gocache/
 
 # Go workspace files
 *.exe
