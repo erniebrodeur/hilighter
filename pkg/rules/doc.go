@@ -1,2 +1,2 @@
-// Package rules will own rule compilation and built-in rule packs.
+// Package rules owns rule-file loading, PCRE compilation, and built-in rule packs.
 package rules

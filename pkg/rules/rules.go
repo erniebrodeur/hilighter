@@ -1,0 +1,165 @@
+package rules
+
+import (
+	"fmt"
+	"os"
+	"sort"
+	"strconv"
+
+	"go.elara.ws/pcre"
+	"go.yaml.in/yaml/v3"
+)
+
+// Scope controls whether a rule styles only the matched substring or a full line.
+type Scope string
+
+const (
+	// ScopeSubstring applies highlighting only to the matched substring.
+	ScopeSubstring Scope = "substring"
+	// ScopeLine applies highlighting to the entire line when the pattern matches.
+	ScopeLine Scope = "line"
+)
+
+// File is the YAML shape for a rule file.
+type File struct {
+	// Rules is the ordered list of rule definitions to compile.
+	Rules []Spec `yaml:"rules"`
+}
+
+// Spec describes one rule as written in YAML.
+type Spec struct {
+	// Name is a stable identifier for diagnostics and testing.
+	Name string `yaml:"name"`
+	// Pattern is the PCRE-compatible regular expression to evaluate.
+	Pattern string `yaml:"pattern"`
+	// Scope defaults to substring when omitted.
+	Scope Scope `yaml:"scope,omitempty"`
+	// Style is the semantic label applied to the whole match or whole line.
+	Style string `yaml:"style,omitempty"`
+	// Groups maps capture group indexes to semantic labels.
+	Groups map[string]string `yaml:"groups,omitempty"`
+}
+
+// Compiled is a rule that has been validated and compiled to a PCRE matcher.
+type Compiled struct {
+	Name    string
+	Pattern string
+	Scope   Scope
+	Style   string
+	Groups  map[int]string
+	Regexp  *pcre.Regexp
+}
+
+// Load reads a rule YAML file from disk.
+func Load(path string) (File, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return File{}, err
+	}
+
+	var file File
+	if err := yaml.Unmarshal(data, &file); err != nil {
+		return File{}, err
+	}
+
+	return file, nil
+}
+
+// Compile validates and compiles rule specs into PCRE-backed matchers.
+func Compile(specs []Spec) ([]Compiled, error) {
+	compiled := make([]Compiled, 0, len(specs))
+	for i, spec := range specs {
+		scope := spec.Scope
+		if scope == "" {
+			scope = ScopeSubstring
+		}
+		if scope != ScopeSubstring && scope != ScopeLine {
+			closeAll(compiled)
+			return nil, fmt.Errorf("rule %q has invalid scope %q", spec.Name, spec.Scope)
+		}
+
+		re, err := pcre.Compile(spec.Pattern)
+		if err != nil {
+			closeAll(compiled)
+			name := spec.Name
+			if name == "" {
+				name = fmt.Sprintf("index %d", i)
+			}
+			return nil, fmt.Errorf("compile rule %q: %w", name, err)
+		}
+
+		groups, err := compileGroups(spec.Groups)
+		if err != nil {
+			re.Close()
+			closeAll(compiled)
+			return nil, fmt.Errorf("rule %q: %w", spec.Name, err)
+		}
+
+		compiled = append(compiled, Compiled{
+			Name:    spec.Name,
+			Pattern: spec.Pattern,
+			Scope:   scope,
+			Style:   spec.Style,
+			Groups:  groups,
+			Regexp:  re,
+		})
+	}
+
+	return compiled, nil
+}
+
+// Builtins returns the built-in rule packs shipped with hilighter.
+func Builtins() map[string]File {
+	return map[string]File{
+		"compiler": {
+			Rules: []Spec{
+				{Name: "compiler-error", Pattern: `(?i)\berror\b`, Style: "error"},
+				{Name: "compiler-warning", Pattern: `(?i)\bwarning\b`, Style: "warning"},
+			},
+		},
+		"go-test": {
+			Rules: []Spec{
+				{Name: "fail-line", Pattern: `^--- FAIL: (.+)$`, Groups: map[string]string{"1": "test-name"}},
+				{Name: "panic", Pattern: `(panic:)(.*)$`, Groups: map[string]string{"1": "error", "2": "detail"}},
+			},
+		},
+		"logs": {
+			Rules: []Spec{
+				{Name: "log-error", Pattern: `(?i)\berror\b`, Style: "error"},
+				{Name: "log-warn", Pattern: `(?i)\bwarn(?:ing)?\b`, Style: "warning"},
+			},
+		},
+	}
+}
+
+// Close releases the PCRE resources held by compiled rules.
+func Close(compiled []Compiled) {
+	closeAll(compiled)
+}
+
+func closeAll(compiled []Compiled) {
+	for _, rule := range compiled {
+		if rule.Regexp != nil {
+			rule.Regexp.Close()
+		}
+	}
+}
+
+func compileGroups(groups map[string]string) (map[int]string, error) {
+	if len(groups) == 0 {
+		return nil, nil
+	}
+
+	keys := make([]int, 0, len(groups))
+	compiled := make(map[int]string, len(groups))
+	for key, label := range groups {
+		index, err := strconv.Atoi(key)
+		if err != nil || index < 1 {
+			return nil, fmt.Errorf("invalid group index %q", key)
+		}
+		keys = append(keys, index)
+		compiled[index] = label
+	}
+	sort.Ints(keys)
+	return compiled, nil
+}

@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/erniebrodeur/hilighter/pkg/config"
@@ -23,7 +24,28 @@ var _ = Describe("Default paths", func() {
 })
 
 var _ = Describe("Config loading", func() {
-	It("loads defaults from ~/.hilighter/config.yaml", Pending)
-	It("allows CLI flags to override config.yaml paths", Pending)
-	It("validates that referenced rule and theme files are coherent", Pending)
+	It("loads defaults from ~/.hilighter/config.yaml", func() {
+		GinkgoT().Setenv("HOME", GinkgoT().TempDir())
+		configDir := filepath.Join(os.Getenv("HOME"), ".hilighter")
+		Expect(os.MkdirAll(configDir, 0o755)).To(Succeed())
+		path := filepath.Join(configDir, "config.yaml")
+		Expect(os.WriteFile(path, []byte("rules: ~/.hilighter/rules.yaml\ntheme: ~/.hilighter/themes/default.yaml\n"), 0o644)).To(Succeed())
+
+		cfg, err := config.Load("")
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.RulesPath).To(Equal(filepath.Join(os.Getenv("HOME"), ".hilighter", "rules.yaml")))
+		Expect(cfg.ThemePath).To(Equal(filepath.Join(os.Getenv("HOME"), ".hilighter", "themes", "default.yaml")))
+	})
+
+	It("loads an explicit config path", func() {
+		path := filepath.Join(GinkgoT().TempDir(), "config.yaml")
+		Expect(os.WriteFile(path, []byte("rules: /tmp/rules.yaml\ntheme: /tmp/theme.yaml\n"), 0o644)).To(Succeed())
+
+		cfg, err := config.Load(path)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.RulesPath).To(Equal("/tmp/rules.yaml"))
+		Expect(cfg.ThemePath).To(Equal("/tmp/theme.yaml"))
+	})
 })
