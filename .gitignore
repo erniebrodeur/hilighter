@@ -1,0 +1,29 @@
+# Local planning
+CURRENT_WORK.md
+
+# Binaries and build output
+hilighter
+bin/
+dist/
+build/
+
+# Go workspace files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+cover.out
+coverage.out
+coverage.html
+.coverprofile
+
+# Go vendor/work files when not intentionally committed
+go.work.sum
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
