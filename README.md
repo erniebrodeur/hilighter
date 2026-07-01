@@ -110,3 +110,15 @@ The project uses Ginkgo and Gomega for BDD-style package tests.
 ```bash
 go test ./...
 ```
+
+If you want named spec output instead of only package-level detail, use:
+
+```bash
+ginkgo -v ./...
+```
+
+If you want to stay on `go test`, pass the Ginkgo verbosity flag through:
+
+```bash
+go test ./... -v -ginkgo.v
+```

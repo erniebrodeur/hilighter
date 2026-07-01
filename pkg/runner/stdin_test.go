@@ -18,4 +18,6 @@ var _ = Describe("RunStdin", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(output.String()).To(Equal("hello\nworld\n"))
 	})
+
+	It("eventually applies configured highlighting while preserving the original text", Pending)
 })

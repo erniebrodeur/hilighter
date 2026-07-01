@@ -25,4 +25,6 @@ var _ = Describe("RunCommand", func() {
 
 		Expect(err).To(HaveOccurred())
 	})
+
+	It("eventually streams command output through the highlighting engine", Pending)
 })

@@ -21,3 +21,9 @@ var _ = Describe("Default paths", func() {
 		Expect(config.DefaultConfigPath()).To(Equal(filepath.Join("/tmp/hilighter-home", ".hilighter", "config.yaml")))
 	})
 })
+
+var _ = Describe("Config loading", func() {
+	It("loads defaults from ~/.hilighter/config.yaml", Pending)
+	It("allows CLI flags to override config.yaml paths", Pending)
+	It("validates that referenced rule and theme files are coherent", Pending)
+})
