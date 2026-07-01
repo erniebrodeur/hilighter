@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"sort"
 	"strconv"
 
@@ -140,6 +141,7 @@ func Close(compiled []Compiled) {
 func closeAll(compiled []Compiled) {
 	for _, rule := range compiled {
 		if rule.Regexp != nil {
+			runtime.SetFinalizer(rule.Regexp, nil)
 			rule.Regexp.Close()
 		}
 	}

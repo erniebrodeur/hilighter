@@ -20,9 +20,8 @@ type Options struct {
 
 // parseOptions reads CLI flags into an Options value.
 //
-// The current scaffold exposes direct rule and theme paths plus a config root.
-// Later slices can layer config-file loading on top of these values without
-// changing the external CLI shape.
+// Rules and themes can be set explicitly with flags or discovered through the
+// config.yaml file under the selected config directory.
 func parseOptions() Options {
 	opts := Options{}
 
