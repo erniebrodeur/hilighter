@@ -7,6 +7,9 @@ import (
 )
 
 // RunCommand executes a shell command and forwards its output streams.
+//
+// The command runs through the user's configured shell when available so the
+// behavior matches normal terminal usage for pipelines, redirects, and quoting.
 func RunCommand(command string, stdout io.Writer, stderr io.Writer) error {
 	shell := os.Getenv("SHELL")
 	if shell == "" {
