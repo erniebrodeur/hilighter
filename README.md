@@ -102,3 +102,11 @@ rules:
 ## Themes
 
 Themes map semantic labels such as `error`, `warning`, or `test-name` to ANSI styles. The default theme direction is Monokai-style foreground colors without background changes.
+
+## Testing
+
+The project uses Ginkgo and Gomega for BDD-style package tests.
+
+```bash
+go test ./...
+```
