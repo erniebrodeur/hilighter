@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/erniebrodeur/hilighter/pkg/config"
+	"github.com/erniebrodeur/hilighter/pkg/rules"
 	"github.com/erniebrodeur/hilighter/pkg/runner"
 )
 
@@ -16,7 +17,7 @@ func Main() error {
 		return err
 	}
 
-	highlighter, err := runner.NewHighlighter(resolved.RulesPath, resolved.ThemePath)
+	highlighter, err := runner.NewHighlighter(resolved.RulesPath, resolved.App, resolved.ThemePath)
 	if err != nil {
 		return err
 	}
@@ -44,6 +45,22 @@ func resolveOptions(opts Options) (Options, error) {
 		}
 	} else if err != nil && !os.IsNotExist(err) {
 		return Options{}, err
+	}
+
+	if opts.Command == "" {
+		if opts.RulesPath != "" {
+			ruleFile, err := rules.Load(opts.RulesPath)
+			if err != nil {
+				return Options{}, err
+			}
+			opts.Command = ruleFile.Command
+		} else if opts.App != "" {
+			ruleFile, ok := rules.Builtin(opts.App)
+			if !ok {
+				return Options{}, rules.ErrUnknownBuiltin(opts.App)
+			}
+			opts.Command = ruleFile.Command
+		}
 	}
 
 	return opts, nil

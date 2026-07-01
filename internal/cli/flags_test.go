@@ -30,6 +30,7 @@ var _ = Describe("parseOptions", func() {
 		opts := parseOptions()
 
 		Expect(opts.ConfigDir).To(Equal("/tmp/hilighter-home/.hilighter"))
+		Expect(opts.App).To(BeEmpty())
 		Expect(opts.RulesPath).To(BeEmpty())
 		Expect(opts.ThemePath).To(BeEmpty())
 		Expect(opts.Command).To(BeEmpty())
@@ -39,6 +40,7 @@ var _ = Describe("parseOptions", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{
 			"hilighter",
+			"--app", "syslog",
 			"--rules", "/tmp/rules.yaml",
 			"--theme", "/tmp/theme.yaml",
 			"--cmd", "printf test",
@@ -46,6 +48,7 @@ var _ = Describe("parseOptions", func() {
 		}
 		opts := parseOptions()
 
+		Expect(opts.App).To(Equal("syslog"))
 		Expect(opts.RulesPath).To(Equal("/tmp/rules.yaml"))
 		Expect(opts.ThemePath).To(Equal("/tmp/theme.yaml"))
 		Expect(opts.Command).To(Equal("printf test"))

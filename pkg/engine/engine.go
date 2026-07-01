@@ -48,19 +48,31 @@ func (e *Engine) Close() {
 
 // ProcessLine applies the first matching rule to one line.
 func (e *Engine) ProcessLine(line string) Result {
+	var spans []Span
 	for _, rule := range e.rules {
 		indices := rule.Regexp.FindStringSubmatchIndex(line)
 		if len(indices) == 0 {
 			continue
 		}
 
-		return Result{
-			Line:  line,
-			Spans: spansForRule(rule, line, indices),
+		for _, span := range spansForRule(rule, line, indices) {
+			if overlapsAny(span, spans) {
+				continue
+			}
+			spans = append(spans, span)
 		}
 	}
 
-	return Result{Line: line}
+	if len(spans) > 1 {
+		sort.Slice(spans, func(i, j int) bool {
+			if spans[i].Start == spans[j].Start {
+				return spans[i].End < spans[j].End
+			}
+			return spans[i].Start < spans[j].Start
+		})
+	}
+
+	return Result{Line: line, Spans: spans}
 }
 
 // ProcessText splits text into lines and applies ProcessLine to each one.
@@ -145,4 +157,13 @@ func spansForRule(rule rules.Compiled, line string, indices []int) []Span {
 		Label:    label,
 		RuleName: rule.Name,
 	}}
+}
+
+func overlapsAny(candidate Span, spans []Span) bool {
+	for _, existing := range spans {
+		if candidate.Start < existing.End && candidate.End > existing.Start {
+			return true
+		}
+	}
+	return false
 }

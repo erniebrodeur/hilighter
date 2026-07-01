@@ -15,16 +15,16 @@ type Highlighter struct {
 
 // NewHighlighter loads rules and theme data for stream processing.
 //
-// If themePath is empty, the built-in default theme is used. If rulesPath is
-// empty, the returned highlighter behaves like a passthrough.
-func NewHighlighter(rulesPath, themePath string) (*Highlighter, error) {
-	if rulesPath == "" {
-		return &Highlighter{}, nil
-	}
-
-	ruleFile, err := rules.Load(rulesPath)
+// If themePath is empty, the built-in default theme is used. If neither a rule
+// path nor built-in app profile is selected, the returned highlighter behaves
+// like a passthrough.
+func NewHighlighter(rulesPath, appName, themePath string) (*Highlighter, error) {
+	ruleFile, err := resolveRuleFile(rulesPath, appName)
 	if err != nil {
 		return nil, err
+	}
+	if ruleFile == nil {
+		return &Highlighter{}, nil
 	}
 
 	compiled, err := rules.Compile(ruleFile.Rules)
@@ -45,6 +45,26 @@ func NewHighlighter(rulesPath, themePath string) (*Highlighter, error) {
 		engine:   engine.New(compiled),
 		renderer: ansi.New(th),
 	}, nil
+}
+
+func resolveRuleFile(rulesPath, appName string) (*rules.File, error) {
+	if rulesPath != "" {
+		file, err := rules.Load(rulesPath)
+		if err != nil {
+			return nil, err
+		}
+		return &file, nil
+	}
+
+	if appName != "" {
+		file, ok := rules.Builtin(appName)
+		if !ok {
+			return nil, rules.ErrUnknownBuiltin(appName)
+		}
+		return &file, nil
+	}
+
+	return nil, nil
 }
 
 // Close releases the compiled PCRE resources owned by the highlighter.

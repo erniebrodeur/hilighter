@@ -31,7 +31,7 @@ var _ = Describe("RunCommand", func() {
 	It("eventually streams command output through the highlighting engine", func() {
 		rulesPath := filepath.Join(GinkgoT().TempDir(), "rules.yaml")
 		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
-		highlighter, err := runner.NewHighlighter(rulesPath, "")
+		highlighter, err := runner.NewHighlighter(rulesPath, "", "")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(highlighter.Close)
 

@@ -45,6 +45,9 @@ theme: ~/.hilighter/themes/default.yaml
 
 You can also point the CLI at explicit files with flags such as `--rules`, `--theme`, or override the base config directory with `--config-dir`.
 
+Built-in app profiles can be selected with `--app` when you want shipped defaults instead of your own rule file.
+Profiles may also carry a default `cmd`, so `hilighter --app syslog` can execute the associated command directly when you do not pass `--cmd`.
+
 ## What It Does
 
 - reads text from a stream or command output
@@ -58,9 +61,13 @@ You can also point the CLI at explicit files with flags such as `--rules`, `--th
 ```bash
 some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
 hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
+hilighter --app syslog
 ```
 
 Pipe mode is the primary use case. Command mode exists for convenience.
+
+When both are available, an explicit `--rules` file takes precedence over `--app`.
+When `--cmd` is omitted, an app profile or rules file can supply a default command through a top-level `cmd` value.
 
 ## Design Direction
 

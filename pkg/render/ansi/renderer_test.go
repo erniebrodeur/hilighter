@@ -42,7 +42,7 @@ var _ = Describe("ANSI renderer", func() {
 		Expect(strings.Count(output, "\x1b[0m")).To(Equal(1))
 	})
 
-	It("emits only foreground styling for the default theme", func() {
+	It("emits a background sequence for default error styling", func() {
 		renderer := ansi.New(theme.Default())
 
 		output := renderer.Render(engine.Result{
@@ -52,7 +52,7 @@ var _ = Describe("ANSI renderer", func() {
 			}},
 		})
 
-		Expect(output).NotTo(ContainSubstring("48;"))
+		Expect(output).To(ContainSubstring(";41m"))
 	})
 
 	It("leaves unmatched text untouched", func() {

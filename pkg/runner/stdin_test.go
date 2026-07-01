@@ -24,7 +24,7 @@ var _ = Describe("RunStdin", func() {
 	It("eventually applies configured highlighting while preserving the original text", func() {
 		rulesPath := filepath.Join(GinkgoT().TempDir(), "rules.yaml")
 		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
-		highlighter, err := runner.NewHighlighter(rulesPath, "")
+		highlighter, err := runner.NewHighlighter(rulesPath, "", "")
 		Expect(err).NotTo(HaveOccurred())
 		DeferCleanup(highlighter.Close)
 

@@ -8,6 +8,8 @@ import (
 
 // Options carries CLI configuration into the application layer.
 type Options struct {
+	// App selects a built-in rule pack such as "syslog".
+	App string
 	// RulesPath points at a YAML file containing ordered highlighting rules.
 	RulesPath string
 	// ThemePath points at a YAML file containing theme style definitions.
@@ -25,6 +27,7 @@ type Options struct {
 func parseOptions() Options {
 	opts := Options{}
 
+	flag.StringVar(&opts.App, "app", "", "built-in app profile to use (for example: syslog)")
 	flag.StringVar(&opts.RulesPath, "rules", "", "path to a rules YAML file")
 	flag.StringVar(&opts.ThemePath, "theme", "", "path to a theme YAML file")
 	flag.StringVar(&opts.Command, "cmd", "", "command to execute and stream through hilighter")

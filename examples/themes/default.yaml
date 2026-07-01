@@ -4,11 +4,22 @@ styles:
   detail:
     fg: white
   error:
-    fg: pink
+    fg: white
+    bg: red
     bold: true
+  host:
+    fg: green
   info:
     fg: cyan
+  notice:
+    fg: cyan
+  process:
+    fg: orange
+  repeat:
+    fg: magenta
   test-name:
     fg: green
+  timestamp:
+    fg: gray
   warning:
     fg: yellow

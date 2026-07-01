@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"sort"
 	"strconv"
+	"strings"
 
 	"go.elara.ws/pcre"
 	"go.yaml.in/yaml/v3"
@@ -23,6 +24,8 @@ const (
 
 // File is the YAML shape for a rule file.
 type File struct {
+	// Command is an optional default shell command associated with the rule pack.
+	Command string `yaml:"cmd,omitempty"`
 	// Rules is the ordered list of rule definitions to compile.
 	Rules []Spec `yaml:"rules"`
 }
@@ -113,12 +116,14 @@ func Compile(specs []Spec) ([]Compiled, error) {
 func Builtins() map[string]File {
 	return map[string]File{
 		"compiler": {
+			Command: "go test ./...",
 			Rules: []Spec{
 				{Name: "compiler-error", Pattern: `(?i)\berror\b`, Style: "error"},
 				{Name: "compiler-warning", Pattern: `(?i)\bwarning\b`, Style: "warning"},
 			},
 		},
 		"go-test": {
+			Command: "go test ./...",
 			Rules: []Spec{
 				{Name: "fail-line", Pattern: `^--- FAIL: (.+)$`, Groups: map[string]string{"1": "test-name"}},
 				{Name: "panic", Pattern: `(panic:)(.*)$`, Groups: map[string]string{"1": "error", "2": "detail"}},
@@ -130,7 +135,75 @@ func Builtins() map[string]File {
 				{Name: "log-warn", Pattern: `(?i)\bwarn(?:ing)?\b`, Style: "warning"},
 			},
 		},
+		"syslog": {
+			Command: "/usr/bin/log stream --style syslog",
+			Rules: []Spec{
+				{
+					Name:    "syslog-log-stream",
+					Pattern: `^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\.\d{6}[+-]\d{4})\s+(\S+)\s+([A-Za-z0-9_.-]+)\[\d+\]:\s+(.*)$`,
+					Groups: map[string]string{
+						"1": "timestamp",
+						"2": "host",
+						"3": "process",
+					},
+				},
+				{
+					Name:    "syslog-error-structured",
+					Pattern: `^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+([A-Za-z0-9_.-]+)\[\d+\]\s+(<(?i:(?:emerg(?:ency)?|alert|crit(?:ical)?|err(?:or)?))>):\s+(.*)$`,
+					Groups: map[string]string{
+						"1": "timestamp",
+						"2": "host",
+						"3": "process",
+						"4": "error",
+					},
+				},
+				{
+					Name:    "syslog-warning-structured",
+					Pattern: `^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+([A-Za-z0-9_.-]+)\[\d+\]\s+(<(?i:warn(?:ing)?)>):\s+(.*)$`,
+					Groups: map[string]string{
+						"1": "timestamp",
+						"2": "host",
+						"3": "process",
+						"4": "warning",
+					},
+				},
+				{
+					Name:    "syslog-notice-structured",
+					Pattern: `^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+([A-Za-z0-9_.-]+)\[\d+\]\s+(<(?i:notice)>):\s+(.*)$`,
+					Groups: map[string]string{
+						"1": "timestamp",
+						"2": "host",
+						"3": "process",
+						"4": "notice",
+					},
+				},
+				{
+					Name:    "syslog-info-structured",
+					Pattern: `^([A-Z][a-z]{2}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})\s+(\S+)\s+([A-Za-z0-9_.-]+)\[\d+\]\s+(<(?i:(?:info|debug))>):\s+(.*)$`,
+					Groups: map[string]string{
+						"1": "timestamp",
+						"2": "host",
+						"3": "process",
+						"4": "info",
+					},
+				},
+				{Name: "syslog-message-error", Pattern: `(?i)\berror\b`, Style: "error"},
+				{Name: "syslog-message-warning", Pattern: `(?i)\bwarn(?:ing)?\b`, Style: "warning"},
+				{Name: "syslog-repeat", Pattern: `^(--- last message repeated \d+ times ---)$`, Groups: map[string]string{"1": "repeat"}},
+			},
+		},
 	}
+}
+
+// Builtin returns one built-in rule pack by name.
+func Builtin(name string) (File, bool) {
+	file, ok := Builtins()[strings.ToLower(name)]
+	return file, ok
+}
+
+// ErrUnknownBuiltin returns an error describing an unknown built-in rule pack.
+func ErrUnknownBuiltin(name string) error {
+	return fmt.Errorf("unknown built-in app profile %q", name)
 }
 
 // Close releases the PCRE resources held by compiled rules.
