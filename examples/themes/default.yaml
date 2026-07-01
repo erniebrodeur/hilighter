@@ -1,8 +1,14 @@
 styles:
+  accent:
+    fg: cyan
+  detail:
+    fg: white
   error:
     fg: pink
     bold: true
-  detail:
-    fg: white
+  info:
+    fg: cyan
   test-name:
     fg: green
+  warning:
+    fg: yellow
