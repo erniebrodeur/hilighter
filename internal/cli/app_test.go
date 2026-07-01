@@ -19,6 +19,16 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.Command).To(Equal("/usr/bin/log stream --style syslog"))
 	})
 
+	It("uses the docker built-in app command when --cmd is not provided", func() {
+		opts, err := resolveOptions(Options{
+			App:       "docker",
+			ConfigDir: GinkgoT().TempDir(),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Command).To(Equal("docker compose up"))
+	})
+
 	It("prefers an explicit command over the built-in app command", func() {
 		opts, err := resolveOptions(Options{
 			App:       "syslog",

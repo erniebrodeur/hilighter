@@ -122,6 +122,28 @@ func Builtins() map[string]File {
 				{Name: "compiler-warning", Pattern: `(?i)\bwarning\b`, Style: "warning"},
 			},
 		},
+		"brew": {
+			Rules: []Spec{
+				{Name: "brew-section", Pattern: `^(==>)\s+(.*)$`, Groups: map[string]string{"1": "accent", "2": "info"}},
+				{Name: "brew-warning", Pattern: `^Warning:.*$`, Scope: ScopeLine, Style: "warning"},
+				{Name: "brew-error", Pattern: `^Error:.*$`, Scope: ScopeLine, Style: "error"},
+				{Name: "brew-url", Pattern: `(https?://\S+)`, Style: "accent"},
+				{Name: "brew-pour", Pattern: `(?i)\b([A-Za-z0-9@+_.-]+)(?:--[A-Za-z0-9+_.-]+)?(?:\.bottle(?:\.[A-Za-z0-9_.-]+)?(?:\.tar\.gz)?)\b`, Groups: map[string]string{"1": "process"}},
+				{Name: "brew-success", Pattern: `^🍺\s+.*$`, Scope: ScopeLine, Style: "info"},
+			},
+		},
+		"docker": {
+			Command: "docker compose up",
+			Rules: []Spec{
+				{Name: "docker-compose-prefix", Pattern: `^([A-Za-z0-9_.-]+)(\s+\|\s+)(.*)$`, Groups: map[string]string{"1": "process"}},
+				{Name: "docker-timestamp", Pattern: `^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)`, Groups: map[string]string{"1": "timestamp"}},
+				{Name: "docker-digest", Pattern: `(sha256:[a-f0-9]{12,64})`, Style: "accent"},
+				{Name: "docker-layer-status", Pattern: `^([a-f0-9]{12}):\s+(Pulling fs layer|Waiting|Downloading|Verifying Checksum|Download complete|Extracting|Pull complete|Already exists)$`, Groups: map[string]string{"1": "accent", "2": "info"}},
+				{Name: "docker-status", Pattern: `(?i)\b(Created|Started|Running|Healthy|Downloaded newer image)\b`, Style: "info"},
+				{Name: "docker-warning", Pattern: `(?i)\bwarning\b`, Style: "warning"},
+				{Name: "docker-error", Pattern: `(?i)\b(error|denied|unauthorized|failed|exited with code)\b`, Style: "error"},
+			},
+		},
 		"go-test": {
 			Command: "go test ./...",
 			Rules: []Spec{
