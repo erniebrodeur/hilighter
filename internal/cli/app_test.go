@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -26,7 +27,7 @@ var _ = Describe("resolveOptions", func() {
 		})
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(opts.Command).To(Equal("docker compose up"))
+		Expect(opts.Command).To(Equal("docker ps -a"))
 	})
 
 	It("prefers an explicit command over the built-in app command", func() {
@@ -51,5 +52,37 @@ var _ = Describe("resolveOptions", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(opts.Command).To(Equal("printf from-rules"))
+	})
+})
+
+var _ = Describe("shouldRunCommand", func() {
+	It("runs an explicit command even when stdin is piped", func() {
+		run := shouldRunCommand(
+			Options{Command: "printf explicit"},
+			Options{Command: "printf explicit"},
+			0,
+		)
+
+		Expect(run).To(BeTrue())
+	})
+
+	It("uses stdin when a built-in app only contributes a default command and stdin is piped", func() {
+		run := shouldRunCommand(
+			Options{App: "docker"},
+			Options{App: "docker", Command: "docker ps -a"},
+			0,
+		)
+
+		Expect(run).To(BeFalse())
+	})
+
+	It("runs the built-in default command when stdin is interactive", func() {
+		run := shouldRunCommand(
+			Options{App: "docker"},
+			Options{App: "docker", Command: "docker ps -a"},
+			fs.ModeCharDevice,
+		)
+
+		Expect(run).To(BeTrue())
 	})
 })

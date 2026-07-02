@@ -1,20 +1,33 @@
 styles:
   accent:
     fg: cyan
+    bold: true
+  bool-false:
+    fg: red
+    bold: true
+  bool-true:
+    fg: green
+    bold: true
   detail:
     fg: white
+  endpoint:
+    fg: orange
+    bold: true
   error:
     fg: white
     bg: red
     bold: true
   host:
     fg: green
+    bold: true
   info:
     fg: cyan
+    bold: true
   notice:
     fg: cyan
   process:
     fg: orange
+    bold: true
   repeat:
     fg: magenta
   test-name:
@@ -23,3 +36,4 @@ styles:
     fg: gray
   warning:
     fg: yellow
+    bold: true

@@ -1,9 +1,14 @@
 # Local planning
 CURRENT_WORK.md
 docker.yaml
+docker-samples/
+tmp/
 
 # Binaries and build output
 hilighter
+hilighter-*
+*.bin
+*.app
 bin/
 dist/
 build/
@@ -18,6 +23,10 @@ build/
 *.dylib
 *.test
 *.out
+*.log
+*.tmp
+*.bak
+*.orig
 cover.out
 coverage.out
 coverage.html
@@ -30,3 +39,5 @@ go.work.sum
 .DS_Store
 .idea/
 .vscode/
+*.swp
+*.swo

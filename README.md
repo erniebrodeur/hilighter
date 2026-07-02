@@ -47,7 +47,7 @@ You can also point the CLI at explicit files with flags such as `--rules`, `--th
 
 Built-in app profiles can be selected with `--app` when you want shipped defaults instead of your own rule file.
 Profiles may also carry a default `cmd`, so `hilighter --app syslog` can execute the associated command directly when you do not pass `--cmd`.
-The `docker` profile also carries a default command, so `hilighter --app docker` defaults to `docker compose up`.
+The `docker` profile also carries a default command, so `hilighter --app docker` defaults to `docker ps -a`.
 Current built-in profiles include `syslog`, `brew`, `docker`, `go-test`, `compiler`, and `logs`.
 
 ## What It Does
@@ -67,12 +67,14 @@ hilighter --app syslog
 hilighter --app docker
 brew install wget 2>&1 | hilighter --app brew
 docker compose up 2>&1 | hilighter --app docker
+docker ps -a 2>&1 | hilighter --app docker
 ```
 
 Pipe mode is the primary use case. Command mode exists for convenience.
 
 When both are available, an explicit `--rules` file takes precedence over `--app`.
 When `--cmd` is omitted, an app profile or rules file can supply a default command through a top-level `cmd` value.
+When stdin is piped, hilighter consumes the piped stream instead of running an app profile's default command.
 
 ## Design Direction
 

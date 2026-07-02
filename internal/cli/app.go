@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -23,11 +24,32 @@ func Main() error {
 	}
 	defer highlighter.Close()
 
-	if resolved.Command != "" {
+	if shouldRunCommand(opts, resolved, stdinMode(os.Stdin)) {
 		return runner.RunCommand(resolved.Command, os.Stdout, os.Stderr, highlighter)
 	}
 
 	return runner.RunStdin(os.Stdin, os.Stdout, highlighter)
+}
+
+func shouldRunCommand(original, resolved Options, mode fs.FileMode) bool {
+	if original.Command != "" {
+		return true
+	}
+
+	if resolved.Command == "" {
+		return false
+	}
+
+	return mode&os.ModeCharDevice != 0
+}
+
+func stdinMode(file *os.File) fs.FileMode {
+	info, err := file.Stat()
+	if err != nil {
+		return os.ModeCharDevice
+	}
+
+	return info.Mode()
 }
 
 func resolveOptions(opts Options) (Options, error) {
