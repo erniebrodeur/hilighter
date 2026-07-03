@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -67,7 +68,7 @@ func shouldShowHelp(opts Options, mode fs.FileMode) bool {
 		mode&os.ModeCharDevice != 0
 }
 
-func printHelp(out *os.File) {
+func printHelp(out io.Writer) {
 	_, _ = fmt.Fprintf(out, `hilighter
 
 Usage:
@@ -147,24 +148,14 @@ func resolveOptions(opts Options) (Options, error) {
 			}
 			if opts.RulesPath == "" {
 				opts.RulesPath = profile.RulesPath
-				if opts.RulesPath != "" {
-					if _, err := os.Stat(opts.RulesPath); err != nil {
-						if os.IsNotExist(err) {
-							return Options{}, fmt.Errorf("profile %q references missing rules file %q", opts.Profile, opts.RulesPath)
-						}
-						return Options{}, err
-					}
+				if err := validateProfileAsset(opts.Profile, "rules", opts.RulesPath); err != nil {
+					return Options{}, err
 				}
 			}
 			if opts.ThemePath == "" {
 				opts.ThemePath = profile.ThemePath
-				if opts.ThemePath != "" {
-					if _, err := os.Stat(opts.ThemePath); err != nil {
-						if os.IsNotExist(err) {
-							return Options{}, fmt.Errorf("profile %q references missing theme file %q", opts.Profile, opts.ThemePath)
-						}
-						return Options{}, err
-					}
+				if err := validateProfileAsset(opts.Profile, "theme", opts.ThemePath); err != nil {
+					return Options{}, err
 				}
 			}
 			if opts.FilePath == "" {
@@ -258,6 +249,21 @@ func resolveFilePath(path string) string {
 	}
 
 	return "." + string(os.PathSeparator) + path
+}
+
+func validateProfileAsset(profileName, assetKind, path string) error {
+	if path == "" {
+		return nil
+	}
+
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("profile %q references missing %s file %q", profileName, assetKind, path)
+		}
+		return err
+	}
+
+	return nil
 }
 
 func autoDetectFileModeHighlighting(path string, cfg config.Config, configDir string) (string, string) {

@@ -2,11 +2,11 @@
 
 `hilighter` is a CLI for coloring command output with regex rules and themes.
 
-It is meant for the normal terminal workflow:
+It is built for normal terminal workflows:
 
 - pipe output through it
-- point it at your own rules
-- or use a built-in profile like `docker`, `brew`, or `syslog`
+- run a command through it
+- use it as a drop-in `tail`, `cat`, or `head` wrapper
 
 ## Install
 
@@ -86,6 +86,15 @@ If you want a custom theme file, start from [examples/themes/default.yaml](/User
 
 ## Usage
 
+Common examples:
+
+```bash
+docker info 2>&1 | hilighter --app docker
+hilighter --cmd "go test ./..." --app go-test
+hilighter tail log/development.log
+hilighter cat rails-log
+```
+
 Pipe mode:
 
 ```bash
@@ -102,34 +111,6 @@ Command mode:
 
 ```bash
 hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
-```
-
-Built-in profiles:
-
-```bash
-hilighter --app docker
-hilighter --app syslog
-brew install wget 2>&1 | hilighter --app brew
-docker info 2>&1 | hilighter --app docker
-docker ps -a 2>&1 | hilighter --app docker
-```
-
-File modes:
-
-```bash
-hilighter tail rails-log
-hilighter tail rails-log log/production.log
-hilighter tail log/development.log
-hilighter cat rails-log
-hilighter cat log/development.log
-hilighter head rails-log
-hilighter head log/development.log
-```
-
-`hilighter tail rails-log` uses the profile's default file, resolved relative to your current working directory. For a Rails profile with `file: log/development.log`, that means:
-
-```text
-./log/development.log
 ```
 
 If stdin is piped, `hilighter` reads the piped input instead of running an app profile's default command.
@@ -162,8 +143,7 @@ Some app profiles include a default command when you run them directly:
 
 ## File Modes
 
-Saved profiles can drive file-oriented commands directly, but these modes are
-also meant to work as practical drop-in aliases for `tail`, `cat`, and `head`.
+`tail`, `cat`, and `head` are meant to work as practical drop-in aliases.
 
 ```bash
 hilighter tail <profile> [file]
@@ -184,7 +164,6 @@ hilighter cat rails-log
 hilighter cat log/development.log
 hilighter head rails-log
 hilighter head log/development.log
-hilighter tail docker-info /var/log/docker.log
 ```
 
 Resolution rules:
@@ -197,12 +176,6 @@ Resolution rules:
 - absolute file paths are used as-is
 - for direct file targets, hilighter tries to auto-detect highlighting from matching saved profile file paths, `~/.hilighter/rules/*.yaml`, or obvious built-in names in the path
 - if nothing matches, the command still runs as plain `tail`, `cat`, or `head`
-
-Behavior:
-
-- `tail` runs `tail -f`
-- `cat` runs `cat`
-- `head` runs `head`
 
 ## Theme Notes
 
