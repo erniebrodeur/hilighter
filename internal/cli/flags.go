@@ -14,8 +14,16 @@ type Options struct {
 	ShowHelp bool
 	// ShowVersion requests the app version marker.
 	ShowVersion bool
+	// NoDetect disables file-mode auto-detection.
+	NoDetect bool
+	// DebugDetect requests file-mode detection diagnostics on stderr.
+	DebugDetect bool
 	// Mode selects a higher-level CLI mode such as "tail", "cat", or "head".
 	Mode string
+	// Subject selects the resource kind for subcommands like list/show.
+	Subject string
+	// Name selects one resource by name for subcommands like show.
+	Name string
 	// Profile selects a named user profile from config.yaml when a file mode
 	// argument resolves to a saved profile name.
 	Profile string
@@ -31,6 +39,8 @@ type Options struct {
 	FilePath string
 	// ConfigDir is the base directory for default config discovery.
 	ConfigDir string
+	// DetectionNote records any auto-detection decision for debug output.
+	DetectionNote string
 }
 
 // parseOptions reads CLI flags into an Options value.
@@ -45,6 +55,8 @@ func parseOptions() (Options, error) {
 	flag.StringVar(&opts.ThemePath, "theme", "", "path to a theme YAML file")
 	flag.StringVar(&opts.Command, "cmd", "", "command to execute and stream through hilighter")
 	flag.StringVar(&opts.ConfigDir, "config-dir", config.DefaultDir(), "config directory (default: ~/.hilighter)")
+	flag.BoolVar(&opts.NoDetect, "no-detect", false, "disable file-mode auto-detection")
+	flag.BoolVar(&opts.DebugDetect, "debug-detect", false, "print file-mode detection decisions")
 	flag.BoolVar(&opts.ShowVersion, "version", false, "print version information")
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
 		return Options{}, err
@@ -57,6 +69,33 @@ func parseOptions() (Options, error) {
 
 	if len(args) == 1 && args[0] == "version" {
 		opts.ShowVersion = true
+		return opts, nil
+	}
+
+	switch args[0] {
+	case "version":
+		opts.ShowVersion = true
+		return opts, nil
+	case "validate":
+		if len(args) > 1 {
+			return Options{}, fmt.Errorf("validate does not accept positional arguments")
+		}
+		opts.Mode = "validate"
+		return opts, nil
+	case "list":
+		if len(args) != 2 {
+			return Options{}, fmt.Errorf("list requires exactly one subject: apps or profiles")
+		}
+		opts.Mode = "list"
+		opts.Subject = args[1]
+		return opts, nil
+	case "show":
+		if len(args) != 3 {
+			return Options{}, fmt.Errorf("show requires a subject and name")
+		}
+		opts.Mode = "show"
+		opts.Subject = args[1]
+		opts.Name = args[2]
 		return opts, nil
 	}
 

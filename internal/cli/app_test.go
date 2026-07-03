@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"bytes"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/erniebrodeur/hilighter/pkg/config"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -205,6 +208,30 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.Command).To(Equal(`head "./var/log/syslog"`))
 	})
 
+	It("skips auto-detection when --no-detect is set", func() {
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "var", "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "var", "log", "syslog"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:        "head",
+			Profile:     "var/log/syslog",
+			NoDetect:    true,
+			DebugDetect: true,
+			ConfigDir:   GinkgoT().TempDir(),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.App).To(BeEmpty())
+		Expect(opts.RulesPath).To(BeEmpty())
+		Expect(opts.DetectionNote).To(Equal("auto-detection disabled"))
+	})
+
 	It("returns a clear error when a direct file path is combined with an extra file argument", func() {
 		_, err := resolveOptions(Options{
 			Mode:      "tail",
@@ -380,5 +407,90 @@ var _ = Describe("formattedVersion", func() {
 		DeferCleanup(func() { Version = previous })
 
 		Expect(formattedVersion()).To(Equal("hilighter-1.0.0"))
+	})
+})
+
+var _ = Describe("control modes", func() {
+	It("lists built-in apps", func() {
+		var out bytes.Buffer
+
+		err := runList(Options{Subject: "apps"}, config.Config{}, &out)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring("docker"))
+		Expect(out.String()).To(ContainSubstring("syslog"))
+	})
+
+	It("shows a profile definition", func() {
+		var out bytes.Buffer
+		cfg := config.Config{
+			Profiles: map[string]config.Profile{
+				"rails-log": {
+					RulesPath: "/tmp/rails.yaml",
+					ThemePath: "/tmp/default.yaml",
+					FilePath:  "log/development.log",
+				},
+			},
+		}
+
+		err := runShow(Options{Subject: "profile", Name: "rails-log"}, cfg, &out)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring("profile: rails-log"))
+		Expect(out.String()).To(ContainSubstring("rules: /tmp/rails.yaml"))
+		Expect(out.String()).To(ContainSubstring("file: log/development.log"))
+	})
+
+	It("validates an explicit rules file and theme file", func() {
+		configDir := GinkgoT().TempDir()
+		rulesPath := filepath.Join(configDir, "rules.yaml")
+		themePath := filepath.Join(configDir, "theme.yaml")
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(themePath, []byte("styles:\n  error:\n    fg: white\n    bg: red\n"), 0o644)).To(Succeed())
+
+		var out bytes.Buffer
+		err := runValidate(Options{
+			ConfigDir: configDir,
+			RulesPath: rulesPath,
+			ThemePath: themePath,
+		}, config.Config{}, false, &out)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out.String()).To(ContainSubstring("ok:"))
+		Expect(out.String()).To(ContainSubstring(rulesPath))
+		Expect(out.String()).To(ContainSubstring(themePath))
+	})
+
+	It("reports validation failures for a broken app reference in config", func() {
+		var out bytes.Buffer
+		err := runValidate(Options{}, config.Config{
+			Profiles: map[string]config.Profile{
+				"broken": {App: "missing-app"},
+			},
+		}, true, &out)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring(`profile "broken": unknown built-in app profile "missing-app"`))
+	})
+
+	It("prints a debug detection message for a detected built-in", func() {
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "var", "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "var", "log", "syslog"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:        "head",
+			Profile:     "var/log/syslog",
+			DebugDetect: true,
+			ConfigDir:   GinkgoT().TempDir(),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(strings.ToLower(opts.DetectionNote)).To(ContainSubstring("matched built-in app"))
 	})
 })

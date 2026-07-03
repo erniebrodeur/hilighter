@@ -107,6 +107,51 @@ var _ = Describe("parseOptions", func() {
 		Expect(opts.FilePath).To(BeEmpty())
 	})
 
+	It("parses the validate subcommand", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "validate"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("validate"))
+	})
+
+	It("parses the list subcommand", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "list", "apps"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("list"))
+		Expect(opts.Subject).To(Equal("apps"))
+	})
+
+	It("parses the show subcommand", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "show", "app", "docker"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("show"))
+		Expect(opts.Subject).To(Equal("app"))
+		Expect(opts.Name).To(Equal("docker"))
+	})
+
+	It("parses detection flags", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "--no-detect", "--debug-detect", "tail", "log/development.log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.NoDetect).To(BeTrue())
+		Expect(opts.DebugDetect).To(BeTrue())
+		Expect(opts.Mode).To(Equal("tail"))
+	})
+
 	It("parses the version flag", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{"hilighter", "--version"}

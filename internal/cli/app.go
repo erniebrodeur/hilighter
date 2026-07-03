@@ -16,6 +16,7 @@ import (
 	"github.com/erniebrodeur/hilighter/pkg/config"
 	"github.com/erniebrodeur/hilighter/pkg/rules"
 	"github.com/erniebrodeur/hilighter/pkg/runner"
+	"github.com/erniebrodeur/hilighter/pkg/theme"
 )
 
 // Main is the top-level CLI entrypoint.
@@ -37,10 +38,16 @@ func Main() error {
 		printHelp(os.Stdout)
 		return nil
 	}
+	if isControlMode(opts.Mode) {
+		return runControlMode(opts, os.Stdout, os.Stderr)
+	}
 
 	resolved, err := resolveOptions(opts)
 	if err != nil {
 		return err
+	}
+	if opts.DebugDetect && resolved.DetectionNote != "" {
+		_, _ = fmt.Fprintf(os.Stderr, "detect: %s\n", resolved.DetectionNote)
 	}
 
 	highlighter, err := runner.NewHighlighter(resolved.RulesPath, resolved.App, resolved.ThemePath)
@@ -78,6 +85,9 @@ Usage:
   hilighter tail <profile> [file]
   hilighter cat <profile> [file]
   hilighter head <profile> [file]
+  hilighter validate
+  hilighter list apps|profiles
+  hilighter show app|profile <name>
   hilighter --version
 
 Flags:
@@ -86,6 +96,8 @@ Flags:
   --theme       path to a theme YAML file
   --cmd         command to run through hilighter
   --config-dir  config directory (default: ~/.hilighter)
+  --no-detect   disable file-mode auto-detection
+  --debug-detect print file-mode detection decisions
   --version     print version information
 `)
 }
@@ -115,15 +127,18 @@ func stdinMode(file *os.File) fs.FileMode {
 	return info.Mode()
 }
 
+func isControlMode(mode string) bool {
+	switch mode {
+	case "validate", "list", "show":
+		return true
+	default:
+		return false
+	}
+}
+
 func resolveOptions(opts Options) (Options, error) {
-	var cfg config.Config
-	configPath := filepath.Join(opts.ConfigDir, "config.yaml")
-	if _, err := os.Stat(configPath); err == nil {
-		cfg, err = config.Load(configPath)
-		if err != nil {
-			return Options{}, err
-		}
-	} else if err != nil && !os.IsNotExist(err) {
+	cfg, _, err := loadConfigIfPresent(opts.ConfigDir)
+	if err != nil {
 		return Options{}, err
 	}
 
@@ -137,6 +152,9 @@ func resolveOptions(opts Options) (Options, error) {
 
 				opts.FilePath = opts.Profile
 				opts.Profile = ""
+				if opts.DebugDetect {
+					opts.DetectionNote = fmt.Sprintf("direct file target %q", resolveFilePath(opts.FilePath))
+				}
 			} else {
 				return Options{}, fmt.Errorf("unknown profile %q", opts.Profile)
 			}
@@ -161,6 +179,9 @@ func resolveOptions(opts Options) (Options, error) {
 			if opts.FilePath == "" {
 				opts.FilePath = profile.FilePath
 			}
+			if opts.DebugDetect {
+				opts.DetectionNote = fmt.Sprintf("explicit profile %q", opts.Profile)
+			}
 		}
 	}
 
@@ -172,14 +193,23 @@ func resolveOptions(opts Options) (Options, error) {
 	}
 
 	if isFileMode(opts.Mode) {
-		if opts.Profile == "" && opts.App == "" && opts.RulesPath == "" {
-			autoApp, autoRules := autoDetectFileModeHighlighting(opts.FilePath, cfg, opts.ConfigDir)
+		if opts.NoDetect {
+			if opts.DebugDetect {
+				opts.DetectionNote = "auto-detection disabled"
+			}
+		} else if opts.Profile == "" && opts.App == "" && opts.RulesPath == "" {
+			detected := autoDetectFileModeHighlighting(opts.FilePath, cfg, opts.ConfigDir)
 			if opts.App == "" {
-				opts.App = autoApp
+				opts.App = detected.App
 			}
 			if opts.RulesPath == "" {
-				opts.RulesPath = autoRules
+				opts.RulesPath = detected.RulesPath
 			}
+			if opts.DebugDetect {
+				opts.DetectionNote = detected.Message
+			}
+		} else if opts.DebugDetect && opts.DetectionNote == "" {
+			opts.DetectionNote = "auto-detection not needed"
 		}
 
 		filePath, command, err := resolveFileMode(opts.Mode, opts.Profile, opts.FilePath)
@@ -208,6 +238,40 @@ func resolveOptions(opts Options) (Options, error) {
 	}
 
 	return opts, nil
+}
+
+func loadConfigIfPresent(configDir string) (config.Config, bool, error) {
+	configPath := filepath.Join(configDir, "config.yaml")
+	if _, err := os.Stat(configPath); err == nil {
+		cfg, loadErr := config.Load(configPath)
+		if loadErr != nil {
+			return config.Config{}, false, loadErr
+		}
+		return cfg, true, nil
+	} else if err != nil && !os.IsNotExist(err) {
+		return config.Config{}, false, err
+	}
+
+	return config.Config{}, false, nil
+}
+
+func runControlMode(opts Options, stdout, stderr io.Writer) error {
+	cfg, cfgFound, err := loadConfigIfPresent(opts.ConfigDir)
+	if err != nil {
+		return err
+	}
+
+	switch opts.Mode {
+	case "validate":
+		return runValidate(opts, cfg, cfgFound, stdout)
+	case "list":
+		return runList(opts, cfg, stdout)
+	case "show":
+		return runShow(opts, cfg, stdout)
+	default:
+		_, _ = fmt.Fprintf(stderr, "unknown control mode %q\n", opts.Mode)
+		return fmt.Errorf("unknown control mode %q", opts.Mode)
+	}
 }
 
 func resolveFileMode(mode, profile, path string) (string, string, error) {
@@ -266,31 +330,47 @@ func validateProfileAsset(profileName, assetKind, path string) error {
 	return nil
 }
 
-func autoDetectFileModeHighlighting(path string, cfg config.Config, configDir string) (string, string) {
+type detectionResult struct {
+	App       string
+	RulesPath string
+	Message   string
+}
+
+func autoDetectFileModeHighlighting(path string, cfg config.Config, configDir string) detectionResult {
 	resolvedPath := resolveFilePath(path)
 
-	if profile, ok := detectProfileForFile(resolvedPath, cfg.Profiles); ok {
-		return profile.App, profile.RulesPath
+	if name, profile, ok := detectProfileForFile(resolvedPath, cfg.Profiles); ok {
+		return detectionResult{
+			App:       profile.App,
+			RulesPath: profile.RulesPath,
+			Message:   fmt.Sprintf("matched profile file %q for %q", name, resolvedPath),
+		}
 	}
 
 	if rulesPath, ok := detectRulesFileForPath(resolvedPath, configDir); ok {
-		return "", rulesPath
+		return detectionResult{
+			RulesPath: rulesPath,
+			Message:   fmt.Sprintf("matched rules file %q for %q", rulesPath, resolvedPath),
+		}
 	}
 
 	if appName, ok := detectBuiltinForPath(resolvedPath); ok {
-		return appName, ""
+		return detectionResult{
+			App:     appName,
+			Message: fmt.Sprintf("matched built-in app %q for %q", appName, resolvedPath),
+		}
 	}
 
-	return "", ""
+	return detectionResult{Message: fmt.Sprintf("no highlight match for %q", resolvedPath)}
 }
 
-func detectProfileForFile(path string, profiles map[string]config.Profile) (config.Profile, bool) {
+func detectProfileForFile(path string, profiles map[string]config.Profile) (string, config.Profile, bool) {
 	if len(profiles) == 0 {
-		return config.Profile{}, false
+		return "", config.Profile{}, false
 	}
 
 	target := normalizeMatchPath(path)
-	for _, profile := range profiles {
+	for name, profile := range profiles {
 		if profile.FilePath == "" || (profile.App == "" && profile.RulesPath == "") {
 			continue
 		}
@@ -301,28 +381,30 @@ func detectProfileForFile(path string, profiles map[string]config.Profile) (conf
 		}
 
 		if target == candidate || strings.HasSuffix(target, "/"+candidate) {
-			return profile, true
+			return name, profile, true
 		}
 	}
 
 	targetBase := filepath.Base(target)
 	var matched config.Profile
+	var matchedName string
 	matches := 0
-	for _, profile := range profiles {
+	for name, profile := range profiles {
 		if profile.FilePath == "" || (profile.App == "" && profile.RulesPath == "") {
 			continue
 		}
 
 		if filepath.Base(normalizeMatchPath(profile.FilePath)) == targetBase {
 			matched = profile
+			matchedName = name
 			matches++
 		}
 	}
 	if matches == 1 {
-		return matched, true
+		return matchedName, matched, true
 	}
 
-	return config.Profile{}, false
+	return "", config.Profile{}, false
 }
 
 func detectRulesFileForPath(path, configDir string) (string, bool) {
@@ -456,4 +538,190 @@ func normalizeToken(value string) string {
 		}
 	}
 	return b.String()
+}
+
+func runList(opts Options, cfg config.Config, out io.Writer) error {
+	switch opts.Subject {
+	case "apps":
+		names := builtinNames()
+		for _, name := range names {
+			_, _ = fmt.Fprintln(out, name)
+		}
+		return nil
+	case "profiles":
+		names := profileNames(cfg.Profiles)
+		if len(names) == 0 {
+			_, _ = fmt.Fprintln(out, "no profiles configured")
+			return nil
+		}
+		for _, name := range names {
+			_, _ = fmt.Fprintln(out, name)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown list subject %q", opts.Subject)
+	}
+}
+
+func runShow(opts Options, cfg config.Config, out io.Writer) error {
+	switch opts.Subject {
+	case "app":
+		file, ok := rules.Builtin(opts.Name)
+		if !ok {
+			return rules.ErrUnknownBuiltin(opts.Name)
+		}
+		_, _ = fmt.Fprintf(out, "app: %s\n", opts.Name)
+		if file.Command != "" {
+			_, _ = fmt.Fprintf(out, "default command: %s\n", file.Command)
+		} else {
+			_, _ = fmt.Fprintln(out, "default command: none")
+		}
+		_, _ = fmt.Fprintf(out, "rules: %d\n", len(file.Rules))
+		return nil
+	case "profile":
+		profile, ok := cfg.Profiles[opts.Name]
+		if !ok {
+			return fmt.Errorf("unknown profile %q", opts.Name)
+		}
+		_, _ = fmt.Fprintf(out, "profile: %s\n", opts.Name)
+		if profile.App != "" {
+			_, _ = fmt.Fprintf(out, "app: %s\n", profile.App)
+		}
+		if profile.RulesPath != "" {
+			_, _ = fmt.Fprintf(out, "rules: %s\n", profile.RulesPath)
+		}
+		if profile.ThemePath != "" {
+			_, _ = fmt.Fprintf(out, "theme: %s\n", profile.ThemePath)
+		}
+		if profile.FilePath != "" {
+			_, _ = fmt.Fprintf(out, "file: %s\n", profile.FilePath)
+		}
+		return nil
+	default:
+		return fmt.Errorf("unknown show subject %q", opts.Subject)
+	}
+}
+
+func runValidate(opts Options, cfg config.Config, cfgFound bool, out io.Writer) error {
+	var issues []string
+	var checks []string
+
+	if cfgFound {
+		checks = append(checks, filepath.Join(opts.ConfigDir, "config.yaml"))
+		issues = append(issues, validateConfigAssets(cfg)...)
+	} else if opts.App == "" && opts.RulesPath == "" && opts.ThemePath == "" {
+		_, _ = fmt.Fprintln(out, "ok: no config file found and no explicit app/rules/theme provided")
+		return nil
+	}
+
+	if opts.App != "" {
+		checks = append(checks, "app:"+opts.App)
+		issues = append(issues, validateBuiltin(opts.App)...)
+	}
+	if opts.RulesPath != "" {
+		checks = append(checks, opts.RulesPath)
+		issues = append(issues, validateRulesFile(opts.RulesPath)...)
+	}
+	if opts.ThemePath != "" {
+		checks = append(checks, opts.ThemePath)
+		issues = append(issues, validateThemeFile(opts.ThemePath)...)
+	}
+
+	if len(issues) > 0 {
+		sort.Strings(issues)
+		return errors.New(strings.Join(issues, "\n"))
+	}
+
+	if len(checks) == 0 {
+		_, _ = fmt.Fprintln(out, "ok")
+		return nil
+	}
+
+	sort.Strings(checks)
+	_, _ = fmt.Fprintf(out, "ok: %s\n", strings.Join(checks, ", "))
+	return nil
+}
+
+func validateConfigAssets(cfg config.Config) []string {
+	var issues []string
+
+	if cfg.RulesPath != "" {
+		issues = append(issues, validateRulesFile(cfg.RulesPath)...)
+	}
+	if cfg.ThemePath != "" {
+		issues = append(issues, validateThemeFile(cfg.ThemePath)...)
+	}
+
+	for name, profile := range cfg.Profiles {
+		if profile.App != "" {
+			for _, issue := range validateBuiltin(profile.App) {
+				issues = append(issues, fmt.Sprintf("profile %q: %s", name, issue))
+			}
+		}
+		if profile.RulesPath != "" {
+			for _, issue := range validateRulesFile(profile.RulesPath) {
+				issues = append(issues, fmt.Sprintf("profile %q: %s", name, issue))
+			}
+		}
+		if profile.ThemePath != "" {
+			for _, issue := range validateThemeFile(profile.ThemePath) {
+				issues = append(issues, fmt.Sprintf("profile %q: %s", name, issue))
+			}
+		}
+	}
+
+	return issues
+}
+
+func validateBuiltin(name string) []string {
+	file, ok := rules.Builtin(name)
+	if !ok {
+		return []string{fmt.Sprintf("unknown built-in app profile %q", name)}
+	}
+
+	compiled, err := rules.Compile(file.Rules)
+	if err != nil {
+		return []string{fmt.Sprintf("app %q: %v", name, err)}
+	}
+	rules.Close(compiled)
+	return nil
+}
+
+func validateRulesFile(path string) []string {
+	file, err := rules.Load(path)
+	if err != nil {
+		return []string{fmt.Sprintf("rules %q: %v", path, err)}
+	}
+
+	compiled, err := rules.Compile(file.Rules)
+	if err != nil {
+		return []string{fmt.Sprintf("rules %q: %v", path, err)}
+	}
+	rules.Close(compiled)
+	return nil
+}
+
+func validateThemeFile(path string) []string {
+	if _, err := theme.Load(path); err != nil {
+		return []string{fmt.Sprintf("theme %q: %v", path, err)}
+	}
+	return nil
+}
+
+func builtinNames() []string {
+	names := make([]string, 0, len(rules.Builtins()))
+	for name := range rules.Builtins() {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+func profileNames(profiles map[string]config.Profile) []string {
+	names := make([]string, 0, len(profiles))
+	for name := range profiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }

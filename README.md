@@ -93,6 +93,9 @@ docker info 2>&1 | hilighter --app docker
 hilighter --cmd "go test ./..." --app go-test
 hilighter tail log/development.log
 hilighter cat rails-log
+hilighter validate
+hilighter list apps
+hilighter show app docker
 ```
 
 Pipe mode:
@@ -139,6 +142,8 @@ Some app profiles include a default command when you run them directly:
 --theme       path to a theme YAML file
 --cmd         command to run through hilighter
 --config-dir  config directory (default: ~/.hilighter)
+--no-detect   disable file-mode auto-detection
+--debug-detect print file-mode detection decisions
 ```
 
 ## File Modes
@@ -176,6 +181,41 @@ Resolution rules:
 - absolute file paths are used as-is
 - for direct file targets, hilighter tries to auto-detect highlighting from matching saved profile file paths, `~/.hilighter/rules/*.yaml`, or obvious built-in names in the path
 - if nothing matches, the command still runs as plain `tail`, `cat`, or `head`
+
+Detection controls:
+
+```bash
+hilighter --no-detect tail log/development.log
+hilighter --debug-detect tail log/development.log
+```
+
+`--debug-detect` prints the detection decision to stderr. `--no-detect` disables
+auto-detection and runs the file mode plainly unless you selected rules or an
+app yourself.
+
+## Inspect And Validate
+
+List built-ins and local profiles:
+
+```bash
+hilighter list apps
+hilighter list profiles
+```
+
+Show one app or profile:
+
+```bash
+hilighter show app docker
+hilighter show profile rails-log
+```
+
+Validate your config and referenced assets:
+
+```bash
+hilighter validate
+hilighter validate --rules ~/.hilighter/rules.yaml --theme ~/.hilighter/themes/default.yaml
+hilighter validate --app docker
+```
 
 ## Theme Notes
 
