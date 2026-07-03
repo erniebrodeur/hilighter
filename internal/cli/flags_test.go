@@ -95,6 +95,18 @@ var _ = Describe("parseOptions", func() {
 		Expect(opts.FilePath).To(Equal("log/development.log"))
 	})
 
+	It("accepts a file-mode target without knowing yet whether it is a profile or path", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "tail", "log/development.log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("tail"))
+		Expect(opts.Profile).To(Equal("log/development.log"))
+		Expect(opts.FilePath).To(BeEmpty())
+	})
+
 	It("parses the version flag", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{"hilighter", "--version"}

@@ -114,13 +114,16 @@ docker info 2>&1 | hilighter --app docker
 docker ps -a 2>&1 | hilighter --app docker
 ```
 
-Tail mode with a named profile:
+File modes:
 
 ```bash
 hilighter tail rails-log
 hilighter tail rails-log log/production.log
+hilighter tail log/development.log
 hilighter cat rails-log
+hilighter cat log/development.log
 hilighter head rails-log
+hilighter head log/development.log
 ```
 
 `hilighter tail rails-log` uses the profile's default file, resolved relative to your current working directory. For a Rails profile with `file: log/development.log`, that means:
@@ -159,12 +162,16 @@ Some app profiles include a default command when you run them directly:
 
 ## File Modes
 
-Saved profiles can drive file-oriented commands directly.
+Saved profiles can drive file-oriented commands directly, but these modes are
+also meant to work as practical drop-in aliases for `tail`, `cat`, and `head`.
 
 ```bash
 hilighter tail <profile> [file]
+hilighter tail <file>
 hilighter cat <profile> [file]
+hilighter cat <file>
 hilighter head <profile> [file]
+hilighter head <file>
 ```
 
 Examples:
@@ -172,18 +179,24 @@ Examples:
 ```bash
 hilighter tail rails-log
 hilighter tail rails-log log/production.log
+hilighter tail log/development.log
 hilighter cat rails-log
+hilighter cat log/development.log
 hilighter head rails-log
+hilighter head log/development.log
 hilighter tail docker-info /var/log/docker.log
 ```
 
 Resolution rules:
 
-- the second argument is the profile name
-- the optional third argument is the file target
+- if the first argument matches a saved profile, it is treated as the profile name
+- otherwise the first argument is treated as the file target
+- when using a profile, the optional third argument overrides the profile's `file` value
 - if the third argument is omitted, the profile's `file` value is used
 - relative file paths are resolved from `./`
 - absolute file paths are used as-is
+- for direct file targets, hilighter tries to auto-detect highlighting from matching saved profile file paths, `~/.hilighter/rules/*.yaml`, or obvious built-in names in the path
+- if nothing matches, the command still runs as plain `tail`, `cat`, or `head`
 
 Behavior:
 

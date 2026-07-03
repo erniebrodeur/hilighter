@@ -106,6 +106,116 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.Command).To(Equal(`tail -f "./log/production.log"`))
 	})
 
+	It("treats an unknown file-mode target as a direct file path", func() {
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "log", "development.log"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "tail",
+			Profile:   "log/development.log",
+			ConfigDir: GinkgoT().TempDir(),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Profile).To(BeEmpty())
+		Expect(opts.FilePath).To(Equal("./log/development.log"))
+		Expect(opts.Command).To(Equal(`tail -f "./log/development.log"`))
+	})
+
+	It("auto-detects a saved profile from the file path and uses its rules", func() {
+		configDir := GinkgoT().TempDir()
+		rulesPath := filepath.Join(configDir, "rails.yaml")
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    rules: "+rulesPath+"\n    file: log/development.log\n"), 0o644)).To(Succeed())
+
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "log", "development.log"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "tail",
+			Profile:   "log/development.log",
+			ConfigDir: configDir,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Profile).To(BeEmpty())
+		Expect(opts.RulesPath).To(Equal(rulesPath))
+		Expect(opts.Command).To(Equal(`tail -f "./log/development.log"`))
+	})
+
+	It("auto-detects a rules file from the config rules directory based on the target path", func() {
+		configDir := GinkgoT().TempDir()
+		rulesDir := filepath.Join(configDir, "rules")
+		Expect(os.MkdirAll(rulesDir, 0o755)).To(Succeed())
+		dockerRules := filepath.Join(rulesDir, "docker.yaml")
+		Expect(os.WriteFile(dockerRules, []byte("rules:\n  - name: container\n    pattern: 'container'\n    style: info\n"), 0o644)).To(Succeed())
+
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "logs"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "logs", "docker.log"), []byte("container booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "cat",
+			Profile:   "logs/docker.log",
+			ConfigDir: configDir,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Profile).To(BeEmpty())
+		Expect(opts.RulesPath).To(Equal(dockerRules))
+		Expect(opts.Command).To(Equal(`cat "./logs/docker.log"`))
+	})
+
+	It("auto-detects a built-in app from the target path when no profile or rules file match", func() {
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "var", "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "var", "log", "syslog"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "head",
+			Profile:   "var/log/syslog",
+			ConfigDir: GinkgoT().TempDir(),
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Profile).To(BeEmpty())
+		Expect(opts.App).To(Equal("syslog"))
+		Expect(opts.Command).To(Equal(`head "./var/log/syslog"`))
+	})
+
+	It("returns a clear error when a direct file path is combined with an extra file argument", func() {
+		_, err := resolveOptions(Options{
+			Mode:      "tail",
+			Profile:   "log/development.log",
+			FilePath:  "log/production.log",
+			ConfigDir: GinkgoT().TempDir(),
+		})
+
+		Expect(err).To(MatchError(`tail accepts either a file path alone or a profile name with an optional file path`))
+	})
+
 	It("resolves a cat profile through the shared file-mode helper", func() {
 		configDir := GinkgoT().TempDir()
 		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    file: log/development.log\n"), 0o644)).To(Succeed())
@@ -181,9 +291,8 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.RulesPath).To(Equal(profileRules))
 	})
 
-	It("returns a clear error when a requested profile does not exist", func() {
+	It("returns a clear error when a requested profile does not exist outside file modes", func() {
 		_, err := resolveOptions(Options{
-			Mode:      "tail",
 			Profile:   "missing",
 			ConfigDir: GinkgoT().TempDir(),
 		})
