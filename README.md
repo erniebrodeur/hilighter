@@ -1,30 +1,28 @@
 # hilighter
 
-`hilighter` is a Go CLI for colorizing streamed text with user-defined regex rules. It is built for `stdout` and `stderr` style workflows where you want expressive highlighting without baking ANSI escape codes into the source text.
+`hilighter` is a CLI for coloring command output with regex rules and themes.
+
+It is meant for the normal terminal workflow:
+
+- pipe output through it
+- point it at your own rules
+- or use a built-in profile like `docker`, `brew`, or `syslog`
 
 ## Install
-
-Install the CLI:
 
 ```bash
 go install github.com/erniebrodeur/hilighter/cmd/hilighter@latest
 ```
 
-If you want the module in another Go project:
-
-```bash
-go get github.com/erniebrodeur/hilighter
-```
-
 ## Configuration
 
-The default per-user config directory is:
+The default config directory is:
 
 ```bash
 ~/.hilighter
 ```
 
-The intended layout is:
+Typical layout:
 
 ```text
 ~/.hilighter/
@@ -34,67 +32,23 @@ The intended layout is:
     └── default.yaml
 ```
 
-`config.yaml` is the place for default overrides such as which rules file or theme file should be used by default.
-
-Example:
+Example `config.yaml`:
 
 ```yaml
 rules: ~/.hilighter/rules.yaml
 theme: ~/.hilighter/themes/default.yaml
+
+profiles:
+  rails-log:
+    rules: ~/.hilighter/rules/rails.yaml
+    theme: ~/.hilighter/themes/default.yaml
+    file: log/development.log
+
+  docker-info:
+    app: docker
 ```
 
-You can also point the CLI at explicit files with flags such as `--rules`, `--theme`, or override the base config directory with `--config-dir`.
-
-Built-in app profiles can be selected with `--app` when you want shipped defaults instead of your own rule file.
-Profiles may also carry a default `cmd`, so `hilighter --app syslog` can execute the associated command directly when you do not pass `--cmd`.
-The `docker` profile also carries a default command, so `hilighter --app docker` defaults to `docker ps -a`.
-Current built-in profiles include `syslog`, `brew`, `docker`, `go-test`, `compiler`, and `logs`.
-
-## What It Does
-
-- reads text from a stream or command output
-- matches lines against ordered regex rules
-- applies ANSI styling to either matched substrings or whole lines
-- keeps the original text unchanged apart from terminal rendering
-- separates rule logic from theme styling
-
-## Intended Usage
-
-```bash
-some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
-hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
-hilighter --app syslog
-hilighter --app docker
-brew install wget 2>&1 | hilighter --app brew
-docker compose up 2>&1 | hilighter --app docker
-docker ps -a 2>&1 | hilighter --app docker
-```
-
-Pipe mode is the primary use case. Command mode exists for convenience.
-
-When both are available, an explicit `--rules` file takes precedence over `--app`.
-When `--cmd` is omitted, an app profile or rules file can supply a default command through a top-level `cmd` value.
-When stdin is piped, hilighter consumes the piped stream instead of running an app profile's default command.
-
-## Design Direction
-
-- implemented in Go
-- YAML-based configuration
-- line-by-line processing
-- first-declared rule wins
-- highlight-only behavior
-- ANSI output in v1
-- PCRE-compatible regex support
-- semantic theme labels with a Monokai-style default theme
-
-Rules can target either:
-
-- a matched substring
-- an entire line
-
-Substring scope is the default when a rule does not specify scope. Rules may also style capture groups independently.
-
-## Example Rule Shape
+Example `rules.yaml`:
 
 ```yaml
 rules:
@@ -102,37 +56,114 @@ rules:
     pattern: '(ERROR|FATAL):\s+(.*)'
     style: error
 
-  - name: go-test-fail
-    pattern: '^--- FAIL: (.+)$'
-    groups:
-      "1": test-name
-
-  - name: full-line-warning
+  - name: warning
     pattern: '^warning:'
     scope: line
     style: warning
+
+  - name: test-fail
+    pattern: '^--- FAIL: (.+)$'
+    groups:
+      "1": test-name
 ```
 
-## Themes
+If you want a custom theme file, start from [examples/themes/default.yaml](/Users/ebrodeur/Projects/hilighter/examples/themes/default.yaml).
 
-Themes map semantic labels such as `error`, `warning`, or `test-name` to ANSI styles. The default theme direction is Monokai-style foreground colors without background changes.
+## Usage
 
-## Testing
-
-The project uses Ginkgo and Gomega for BDD-style package tests.
+Pipe mode:
 
 ```bash
-go test ./...
+some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
 ```
 
-If you want named spec output instead of only package-level detail, use:
+Command mode:
 
 ```bash
-ginkgo -v ./...
+hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
 ```
 
-If you want to stay on `go test`, pass the Ginkgo verbosity flag through:
+Built-in profiles:
 
 ```bash
-go test ./... -v -ginkgo.v
+hilighter --app docker
+hilighter --app syslog
+brew install wget 2>&1 | hilighter --app brew
+docker info 2>&1 | hilighter --app docker
+docker ps -a 2>&1 | hilighter --app docker
 ```
+
+Tail mode with a named profile:
+
+```bash
+hilighter tail rails-log
+hilighter tail rails-log log/production.log
+```
+
+`hilighter tail rails-log` uses the profile's default file, resolved relative to your current working directory. For a Rails profile with `file: log/development.log`, that means:
+
+```text
+./log/development.log
+```
+
+If stdin is piped, `hilighter` reads the piped input instead of running an app profile's default command.
+
+## Built-In Profiles
+
+Current built-ins:
+
+- `docker`
+- `syslog`
+- `brew`
+- `go-test`
+- `compiler`
+- `logs`
+
+Some app profiles include a default command when you run them directly:
+
+- `docker` -> `docker ps -a`
+- `syslog` -> `/usr/bin/log stream --style syslog`
+
+## CLI Flags
+
+```text
+--app         built-in profile to use
+--rules       path to a rules YAML file
+--theme       path to a theme YAML file
+--cmd         command to run through hilighter
+--config-dir  config directory (default: ~/.hilighter)
+```
+
+## Tail Mode
+
+`tail` is intended for saved log profiles.
+
+```bash
+hilighter tail <profile> [file]
+```
+
+Examples:
+
+```bash
+hilighter tail rails-log
+hilighter tail rails-log log/production.log
+hilighter tail docker-info /var/log/docker.log
+```
+
+Resolution rules:
+
+- the second argument is the profile name
+- the optional third argument is the file to follow
+- if the third argument is omitted, the profile's `file` value is used
+- relative file paths are resolved from `./`
+- absolute file paths are used as-is
+
+## Theme Notes
+
+The default theme is terminal-friendly and restrained:
+
+- errors are high contrast
+- warnings are easy to spot
+- Docker hostnames, IPs, and ports are emphasized
+
+You can override any of that with your own theme YAML.

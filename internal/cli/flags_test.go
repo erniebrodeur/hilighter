@@ -27,10 +27,13 @@ var _ = Describe("parseOptions", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{"hilighter"}
 
-		opts := parseOptions()
+		opts, err := parseOptions()
 
+		Expect(err).NotTo(HaveOccurred())
 		Expect(opts.ConfigDir).To(Equal("/tmp/hilighter-home/.hilighter"))
 		Expect(opts.App).To(BeEmpty())
+		Expect(opts.Mode).To(BeEmpty())
+		Expect(opts.Profile).To(BeEmpty())
 		Expect(opts.RulesPath).To(BeEmpty())
 		Expect(opts.ThemePath).To(BeEmpty())
 		Expect(opts.Command).To(BeEmpty())
@@ -46,12 +49,25 @@ var _ = Describe("parseOptions", func() {
 			"--cmd", "printf test",
 			"--config-dir", "/tmp/custom",
 		}
-		opts := parseOptions()
+		opts, err := parseOptions()
 
+		Expect(err).NotTo(HaveOccurred())
 		Expect(opts.App).To(Equal("syslog"))
 		Expect(opts.RulesPath).To(Equal("/tmp/rules.yaml"))
 		Expect(opts.ThemePath).To(Equal("/tmp/theme.yaml"))
 		Expect(opts.Command).To(Equal("printf test"))
 		Expect(opts.ConfigDir).To(Equal("/tmp/custom"))
+	})
+
+	It("parses the tail subcommand with profile and optional file path", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "tail", "rails-log", "log/development.log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("tail"))
+		Expect(opts.Profile).To(Equal("rails-log"))
+		Expect(opts.FilePath).To(Equal("log/development.log"))
 	})
 })

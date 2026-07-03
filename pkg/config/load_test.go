@@ -48,4 +48,18 @@ var _ = Describe("Config loading", func() {
 		Expect(cfg.RulesPath).To(Equal("/tmp/rules.yaml"))
 		Expect(cfg.ThemePath).To(Equal("/tmp/theme.yaml"))
 	})
+
+	It("loads named profiles and expands home-relative paths within them", func() {
+		GinkgoT().Setenv("HOME", GinkgoT().TempDir())
+		path := filepath.Join(GinkgoT().TempDir(), "config.yaml")
+		Expect(os.WriteFile(path, []byte("profiles:\n  rails-log:\n    rules: ~/.hilighter/rules/rails.yaml\n    theme: ~/.hilighter/themes/default.yaml\n    file: ~/work/app/log/development.log\n"), 0o644)).To(Succeed())
+
+		cfg, err := config.Load(path)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cfg.Profiles).To(HaveKey("rails-log"))
+		Expect(cfg.Profiles["rails-log"].RulesPath).To(Equal(filepath.Join(os.Getenv("HOME"), ".hilighter", "rules", "rails.yaml")))
+		Expect(cfg.Profiles["rails-log"].ThemePath).To(Equal(filepath.Join(os.Getenv("HOME"), ".hilighter", "themes", "default.yaml")))
+		Expect(cfg.Profiles["rails-log"].FilePath).To(Equal(filepath.Join(os.Getenv("HOME"), "work", "app", "log", "development.log")))
+	})
 })

@@ -54,6 +54,12 @@ func Load(path string) (Config, error) {
 
 	cfg.RulesPath = expandHome(cfg.RulesPath)
 	cfg.ThemePath = expandHome(cfg.ThemePath)
+	for name, profile := range cfg.Profiles {
+		profile.RulesPath = expandHome(profile.RulesPath)
+		profile.ThemePath = expandHome(profile.ThemePath)
+		profile.FilePath = expandHome(profile.FilePath)
+		cfg.Profiles[name] = profile
+	}
 
 	return cfg, nil
 }
