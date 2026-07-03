@@ -70,4 +70,48 @@ var _ = Describe("parseOptions", func() {
 		Expect(opts.Profile).To(Equal("rails-log"))
 		Expect(opts.FilePath).To(Equal("log/development.log"))
 	})
+
+	It("parses the cat subcommand with profile and optional file path", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "cat", "rails-log", "log/development.log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("cat"))
+		Expect(opts.Profile).To(Equal("rails-log"))
+		Expect(opts.FilePath).To(Equal("log/development.log"))
+	})
+
+	It("parses the head subcommand with profile and optional file path", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "head", "rails-log", "log/development.log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(Equal("head"))
+		Expect(opts.Profile).To(Equal("rails-log"))
+		Expect(opts.FilePath).To(Equal("log/development.log"))
+	})
+
+	It("parses the version flag", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "--version"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.ShowVersion).To(BeTrue())
+	})
+
+	It("parses the version subcommand", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "version"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.ShowVersion).To(BeTrue())
+	})
 })

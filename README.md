@@ -14,6 +14,21 @@ It is meant for the normal terminal workflow:
 go install github.com/erniebrodeur/hilighter/cmd/hilighter@latest
 ```
 
+## Version
+
+Print the app version marker:
+
+```bash
+hilighter --version
+hilighter version
+```
+
+Release builds can stamp a version like `hilighter-1.0.0` with:
+
+```bash
+go build -ldflags "-X github.com/erniebrodeur/hilighter/internal/cli.Version=1.0.0" -o hilighter ./cmd/hilighter
+```
+
 ## Configuration
 
 The default config directory is:
@@ -77,6 +92,12 @@ Pipe mode:
 some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
 ```
 
+Show help:
+
+```bash
+hilighter
+```
+
 Command mode:
 
 ```bash
@@ -98,6 +119,8 @@ Tail mode with a named profile:
 ```bash
 hilighter tail rails-log
 hilighter tail rails-log log/production.log
+hilighter cat rails-log
+hilighter head rails-log
 ```
 
 `hilighter tail rails-log` uses the profile's default file, resolved relative to your current working directory. For a Rails profile with `file: log/development.log`, that means:
@@ -134,12 +157,14 @@ Some app profiles include a default command when you run them directly:
 --config-dir  config directory (default: ~/.hilighter)
 ```
 
-## Tail Mode
+## File Modes
 
-`tail` is intended for saved log profiles.
+Saved profiles can drive file-oriented commands directly.
 
 ```bash
 hilighter tail <profile> [file]
+hilighter cat <profile> [file]
+hilighter head <profile> [file]
 ```
 
 Examples:
@@ -147,16 +172,24 @@ Examples:
 ```bash
 hilighter tail rails-log
 hilighter tail rails-log log/production.log
+hilighter cat rails-log
+hilighter head rails-log
 hilighter tail docker-info /var/log/docker.log
 ```
 
 Resolution rules:
 
 - the second argument is the profile name
-- the optional third argument is the file to follow
+- the optional third argument is the file target
 - if the third argument is omitted, the profile's `file` value is used
 - relative file paths are resolved from `./`
 - absolute file paths are used as-is
+
+Behavior:
+
+- `tail` runs `tail -f`
+- `cat` runs `cat`
+- `head` runs `head`
 
 ## Theme Notes
 

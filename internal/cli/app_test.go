@@ -106,6 +106,54 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.Command).To(Equal(`tail -f "./log/production.log"`))
 	})
 
+	It("resolves a cat profile through the shared file-mode helper", func() {
+		configDir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    file: log/development.log\n"), 0o644)).To(Succeed())
+
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "log", "development.log"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "cat",
+			Profile:   "rails-log",
+			ConfigDir: configDir,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.FilePath).To(Equal("./log/development.log"))
+		Expect(opts.Command).To(Equal(`cat "./log/development.log"`))
+	})
+
+	It("resolves a head profile through the shared file-mode helper", func() {
+		configDir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    file: log/development.log\n"), 0o644)).To(Succeed())
+
+		cwd := GinkgoT().TempDir()
+		Expect(os.MkdirAll(filepath.Join(cwd, "log"), 0o755)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(cwd, "log", "development.log"), []byte("booted\n"), 0o644)).To(Succeed())
+
+		previous, err := os.Getwd()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chdir(cwd)).To(Succeed())
+		DeferCleanup(func() { _ = os.Chdir(previous) })
+
+		opts, err := resolveOptions(Options{
+			Mode:      "head",
+			Profile:   "rails-log",
+			ConfigDir: configDir,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.FilePath).To(Equal("./log/development.log"))
+		Expect(opts.Command).To(Equal(`head "./log/development.log"`))
+	})
+
 	It("prefers profile rules over root config defaults", func() {
 		configDir := GinkgoT().TempDir()
 		globalRules := filepath.Join(configDir, "global-rules.yaml")
@@ -158,6 +206,16 @@ var _ = Describe("resolveOptions", func() {
 })
 
 var _ = Describe("shouldRunCommand", func() {
+	It("always runs file modes even when stdin is piped", func() {
+		run := shouldRunCommand(
+			Options{Mode: "head", Profile: "rails-log"},
+			Options{Mode: "head", Profile: "rails-log", Command: `head "./log/development.log"`},
+			0,
+		)
+
+		Expect(run).To(BeTrue())
+	})
+
 	It("runs an explicit command even when stdin is piped", func() {
 		run := shouldRunCommand(
 			Options{Command: "printf explicit"},
@@ -186,5 +244,32 @@ var _ = Describe("shouldRunCommand", func() {
 		)
 
 		Expect(run).To(BeTrue())
+	})
+})
+
+var _ = Describe("shouldShowHelp", func() {
+	It("shows help for an interactive session with no arguments", func() {
+		show := shouldShowHelp(Options{}, fs.ModeCharDevice)
+		Expect(show).To(BeTrue())
+	})
+
+	It("does not show help when stdin is piped", func() {
+		show := shouldShowHelp(Options{}, 0)
+		Expect(show).To(BeFalse())
+	})
+
+	It("does not show help when a version request is present", func() {
+		show := shouldShowHelp(Options{ShowVersion: true}, fs.ModeCharDevice)
+		Expect(show).To(BeFalse())
+	})
+})
+
+var _ = Describe("formattedVersion", func() {
+	It("formats the app-wide version marker", func() {
+		previous := Version
+		Version = "1.0.0"
+		DeferCleanup(func() { Version = previous })
+
+		Expect(formattedVersion()).To(Equal("hilighter-1.0.0"))
 	})
 })

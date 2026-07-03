@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,8 +18,22 @@ import (
 func Main() error {
 	opts, err := parseOptions()
 	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
 		return err
 	}
+
+	mode := stdinMode(os.Stdin)
+	if opts.ShowVersion {
+		_, _ = fmt.Fprintln(os.Stdout, formattedVersion())
+		return nil
+	}
+	if shouldShowHelp(opts, mode) {
+		printHelp(os.Stdout)
+		return nil
+	}
+
 	resolved, err := resolveOptions(opts)
 	if err != nil {
 		return err
@@ -29,15 +45,49 @@ func Main() error {
 	}
 	defer highlighter.Close()
 
-	if shouldRunCommand(opts, resolved, stdinMode(os.Stdin)) {
+	if shouldRunCommand(opts, resolved, mode) {
 		return runner.RunCommand(resolved.Command, os.Stdout, os.Stderr, highlighter)
 	}
 
 	return runner.RunStdin(os.Stdin, os.Stdout, highlighter)
 }
 
+func shouldShowHelp(opts Options, mode fs.FileMode) bool {
+	return opts.Mode == "" &&
+		!opts.ShowVersion &&
+		opts.Profile == "" &&
+		opts.App == "" &&
+		opts.RulesPath == "" &&
+		opts.ThemePath == "" &&
+		opts.Command == "" &&
+		opts.FilePath == "" &&
+		mode&os.ModeCharDevice != 0
+}
+
+func printHelp(out *os.File) {
+	_, _ = fmt.Fprintf(out, `hilighter
+
+Usage:
+  hilighter --app <name>
+  hilighter --rules <file>
+  hilighter --cmd "<command>"
+  hilighter tail <profile> [file]
+  hilighter cat <profile> [file]
+  hilighter head <profile> [file]
+  hilighter --version
+
+Flags:
+  --app         built-in profile to use
+  --rules       path to a rules YAML file
+  --theme       path to a theme YAML file
+  --cmd         command to run through hilighter
+  --config-dir  config directory (default: ~/.hilighter)
+  --version     print version information
+`)
+}
+
 func shouldRunCommand(original, resolved Options, mode fs.FileMode) bool {
-	if original.Mode == "tail" {
+	if isFileMode(original.Mode) {
 		return true
 	}
 
@@ -76,36 +126,47 @@ func resolveOptions(opts Options) (Options, error) {
 	if opts.Profile != "" {
 		profile, ok := cfg.Profiles[opts.Profile]
 		if !ok {
-			return Options{}, fmt.Errorf("unknown profile %q", opts.Profile)
+			if isFileMode(opts.Mode) {
+				if opts.FilePath != "" {
+					return Options{}, fmt.Errorf("%s accepts either a file path alone or a profile name with an optional file path", opts.Mode)
+				}
+
+				opts.FilePath = opts.Profile
+				opts.Profile = ""
+			} else {
+				return Options{}, fmt.Errorf("unknown profile %q", opts.Profile)
+			}
 		}
 
-		if opts.App == "" {
-			opts.App = profile.App
-		}
-		if opts.RulesPath == "" {
-			opts.RulesPath = profile.RulesPath
-			if opts.RulesPath != "" {
-				if _, err := os.Stat(opts.RulesPath); err != nil {
-					if os.IsNotExist(err) {
-						return Options{}, fmt.Errorf("profile %q references missing rules file %q", opts.Profile, opts.RulesPath)
+		if ok {
+			if opts.App == "" {
+				opts.App = profile.App
+			}
+			if opts.RulesPath == "" {
+				opts.RulesPath = profile.RulesPath
+				if opts.RulesPath != "" {
+					if _, err := os.Stat(opts.RulesPath); err != nil {
+						if os.IsNotExist(err) {
+							return Options{}, fmt.Errorf("profile %q references missing rules file %q", opts.Profile, opts.RulesPath)
+						}
+						return Options{}, err
 					}
-					return Options{}, err
 				}
 			}
-		}
-		if opts.ThemePath == "" {
-			opts.ThemePath = profile.ThemePath
-			if opts.ThemePath != "" {
-				if _, err := os.Stat(opts.ThemePath); err != nil {
-					if os.IsNotExist(err) {
-						return Options{}, fmt.Errorf("profile %q references missing theme file %q", opts.Profile, opts.ThemePath)
+			if opts.ThemePath == "" {
+				opts.ThemePath = profile.ThemePath
+				if opts.ThemePath != "" {
+					if _, err := os.Stat(opts.ThemePath); err != nil {
+						if os.IsNotExist(err) {
+							return Options{}, fmt.Errorf("profile %q references missing theme file %q", opts.Profile, opts.ThemePath)
+						}
+						return Options{}, err
 					}
-					return Options{}, err
 				}
 			}
-		}
-		if opts.FilePath == "" {
-			opts.FilePath = profile.FilePath
+			if opts.FilePath == "" {
+				opts.FilePath = profile.FilePath
+			}
 		}
 	}
 
@@ -116,20 +177,13 @@ func resolveOptions(opts Options) (Options, error) {
 		opts.ThemePath = cfg.ThemePath
 	}
 
-	if opts.Mode == "tail" {
-		if opts.FilePath == "" {
-			return Options{}, fmt.Errorf("profile %q does not define a default file and no file argument was provided", opts.Profile)
-		}
-
-		opts.FilePath = resolveTailPath(opts.FilePath)
-		if _, err := os.Stat(opts.FilePath); err != nil {
-			if os.IsNotExist(err) {
-				return Options{}, fmt.Errorf("tail target %q does not exist", opts.FilePath)
-			}
+	if isFileMode(opts.Mode) {
+		filePath, command, err := resolveFileMode(opts.Mode, opts.Profile, opts.FilePath)
+		if err != nil {
 			return Options{}, err
 		}
-
-		opts.Command = "tail -f " + strconv.Quote(opts.FilePath)
+		opts.FilePath = filePath
+		opts.Command = command
 		return opts, nil
 	}
 
@@ -152,7 +206,32 @@ func resolveOptions(opts Options) (Options, error) {
 	return opts, nil
 }
 
-func resolveTailPath(path string) string {
+func resolveFileMode(mode, profile, path string) (string, string, error) {
+	if path == "" {
+		return "", "", fmt.Errorf("profile %q does not define a default file and no file argument was provided", profile)
+	}
+
+	resolvedPath := resolveFilePath(path)
+	if _, err := os.Stat(resolvedPath); err != nil {
+		if os.IsNotExist(err) {
+			return "", "", fmt.Errorf("%s target %q does not exist", mode, resolvedPath)
+		}
+		return "", "", err
+	}
+
+	switch mode {
+	case "tail":
+		return resolvedPath, "tail -f " + strconv.Quote(resolvedPath), nil
+	case "cat":
+		return resolvedPath, "cat " + strconv.Quote(resolvedPath), nil
+	case "head":
+		return resolvedPath, "head " + strconv.Quote(resolvedPath), nil
+	default:
+		return "", "", fmt.Errorf("unknown file mode %q", mode)
+	}
+}
+
+func resolveFilePath(path string) string {
 	if filepath.IsAbs(path) {
 		return path
 	}
