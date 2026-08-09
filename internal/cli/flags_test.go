@@ -117,6 +117,17 @@ var _ = Describe("parseOptions", func() {
 		Expect(opts.Mode).To(Equal("validate"))
 	})
 
+	It("parses a bare profile name for stdin mode", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "rails-log"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Mode).To(BeEmpty())
+		Expect(opts.Profile).To(Equal("rails-log"))
+	})
+
 	It("parses the list subcommand", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{"hilighter", "list", "apps"}

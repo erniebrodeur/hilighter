@@ -1,6 +1,6 @@
 # hilighter
 
-`hilighter` is a CLI for coloring command output with regex rules and themes.
+`hilighter` is a CLI for colorizing terminal output that is plain, inconsistent, or too noisy by default.
 
 It is built for normal terminal workflows:
 
@@ -90,6 +90,7 @@ Common examples:
 
 ```bash
 docker info 2>&1 | hilighter --app docker
+docker info 2>&1 | hilighter docker-info
 hilighter --cmd "go test ./..." --app go-test
 hilighter tail log/development.log
 hilighter cat rails-log
@@ -102,6 +103,7 @@ Pipe mode:
 
 ```bash
 some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
+some-command 2>&1 | hilighter rails-log
 ```
 
 Show help:
@@ -117,6 +119,16 @@ hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
 ```
 
 If stdin is piped, `hilighter` reads the piped input instead of running an app profile's default command.
+
+If you already saved a profile in `~/.hilighter/config.yaml`, you can select it
+directly in pipe mode:
+
+```bash
+some-command 2>&1 | hilighter sally-go
+```
+
+That resolves the profile's `rules`, `theme`, and optional `app` defaults, then
+still reads the piped stdin instead of trying to run a default command.
 
 ## Built-In Profiles
 

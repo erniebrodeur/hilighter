@@ -57,6 +57,25 @@ var _ = Describe("resolveOptions", func() {
 		Expect(opts.Command).To(Equal("printf from-rules"))
 	})
 
+	It("loads rules and theme from a named profile outside file modes", func() {
+		configDir := GinkgoT().TempDir()
+		rulesPath := filepath.Join(configDir, "rails.yaml")
+		themePath := filepath.Join(configDir, "default.yaml")
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    rules: "+rulesPath+"\n    theme: "+themePath+"\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
+		Expect(os.WriteFile(themePath, []byte("styles:\n  error:\n    fg: red\n"), 0o644)).To(Succeed())
+
+		opts, err := resolveOptions(Options{
+			Profile:   "rails-log",
+			ConfigDir: configDir,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Profile).To(Equal("rails-log"))
+		Expect(opts.RulesPath).To(Equal(rulesPath))
+		Expect(opts.ThemePath).To(Equal(themePath))
+	})
+
 	It("resolves a tail profile and defaults its file under the current working directory", func() {
 		configDir := GinkgoT().TempDir()
 		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("profiles:\n  rails-log:\n    rules: /tmp/rails.yaml\n    file: log/development.log\n"), 0o644)).To(Succeed())

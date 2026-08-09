@@ -1,5 +1,6 @@
 # Local planning
 CURRENT_WORK.md
+dev.db
 docker.yaml
 docker-samples/
 tmp/

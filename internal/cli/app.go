@@ -79,6 +79,7 @@ func printHelp(out io.Writer) {
 	_, _ = fmt.Fprintf(out, `hilighter
 
 Usage:
+  hilighter <profile>
   hilighter --app <name>
   hilighter --rules <file>
   hilighter --cmd "<command>"

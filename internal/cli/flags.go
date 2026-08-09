@@ -24,8 +24,7 @@ type Options struct {
 	Subject string
 	// Name selects one resource by name for subcommands like show.
 	Name string
-	// Profile selects a named user profile from config.yaml when a file mode
-	// argument resolves to a saved profile name.
+	// Profile selects a named user profile from config.yaml.
 	Profile string
 	// App selects a built-in rule pack such as "syslog".
 	App string
@@ -96,6 +95,11 @@ func parseOptions() (Options, error) {
 		opts.Mode = "show"
 		opts.Subject = args[1]
 		opts.Name = args[2]
+		return opts, nil
+	}
+
+	if len(args) == 1 {
+		opts.Profile = args[0]
 		return opts, nil
 	}
 
