@@ -46,20 +46,17 @@ func (e *Engine) Close() {
 	rules.Close(e.rules)
 }
 
-// ProcessLine applies the first matching rule to one line.
+// ProcessLine applies ordered rules to every non-overlapping match on one line.
 func (e *Engine) ProcessLine(line string) Result {
 	var spans []Span
 	for _, rule := range e.rules {
-		indices := rule.Regexp.FindStringSubmatchIndex(line)
-		if len(indices) == 0 {
-			continue
-		}
-
-		for _, span := range spansForRule(rule, line, indices) {
-			if overlapsAny(span, spans) {
-				continue
+		for _, indices := range rule.Regexp.FindAllStringSubmatchIndex(line, -1) {
+			for _, span := range spansForRule(rule, line, indices) {
+				if overlapsAny(span, spans) {
+					continue
+				}
+				spans = append(spans, span)
 			}
-			spans = append(spans, span)
 		}
 	}
 
