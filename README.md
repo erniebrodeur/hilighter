@@ -84,7 +84,8 @@ Use a selector with `-t` or as the `theme` value in `~/.hilighter/config.yaml`.
 
 When no expressions or custom rules are selected, the shipped rules highlight:
 
-- IPv4 and IPv6 addresses
+- IPv4, IPv6, and MAC addresses
+- extended ISO 8601 and classic syslog timestamps
 - URLs containing a scheme such as `https://`
 - email addresses
 - `TRACE`, `DEBUG`, `INFO`, `NOTICE`, `WARN`, `WARNING`, `ERROR`, and `FATAL`, case-insensitively

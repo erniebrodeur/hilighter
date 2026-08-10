@@ -1,10 +1,18 @@
 package rules
 
 const (
-	ipv4Octet = `(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)`
-	ipv4      = `(?:` + ipv4Octet + `\.){3}` + ipv4Octet
-	ipv6Hex   = `[0-9A-Fa-f]{1,4}`
-	ipv6      = `(?:` +
+	isoDate      = `\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|02-(?:0[1-9]|1\d|2[0-9]))`
+	clockTime    = `(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d`
+	isoOffset    = `(?:Z|[+-](?:(?:0\d|1[0-3]):?[0-5]\d|14:?00))`
+	isoTimestamp = isoDate + `T` + clockTime + `(?:[.,]\d+)?` + isoOffset + `?`
+	syslogMonth  = `(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)`
+	syslogDate   = syslogMonth + ` (?: [1-9]|[12]\d|3[01])`
+	ipv4Octet    = `(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)`
+	ipv4         = `(?:` + ipv4Octet + `\.){3}` + ipv4Octet
+	macByte      = `[0-9A-Fa-f]{2}`
+	mac          = `(?:(?:` + macByte + `:){5}` + macByte + `|(?:` + macByte + `-){5}` + macByte + `|(?:[0-9A-Fa-f]{4}\.){2}[0-9A-Fa-f]{4})`
+	ipv6Hex      = `[0-9A-Fa-f]{1,4}`
+	ipv6         = `(?:` +
 		`(?:` + ipv6Hex + `:){7}` + ipv6Hex + `|` +
 		`(?:` + ipv6Hex + `:){1,7}:|` +
 		`(?:` + ipv6Hex + `:){1,6}:` + ipv6Hex + `|` +
@@ -35,8 +43,23 @@ func Default() File {
 			Style:   "accent",
 		},
 		{
+			Name:    "default-iso-timestamp",
+			Pattern: `(?<![0-9A-Za-z_])` + isoTimestamp + `(?![0-9A-Za-z_]|[.,]\d|[+-]\d)`,
+			Style:   "timestamp",
+		},
+		{
+			Name:    "default-syslog-timestamp",
+			Pattern: `(?<![0-9A-Za-z_])` + syslogDate + ` ` + clockTime + `(?![0-9A-Za-z_])`,
+			Style:   "timestamp",
+		},
+		{
+			Name:    "default-mac",
+			Pattern: `(?<![0-9A-Za-z_.:-])` + mac + `(?![0-9A-Za-z_.:-])`,
+			Style:   "endpoint",
+		},
+		{
 			Name:    "default-ipv6",
-			Pattern: `(?<![0-9A-Fa-f:.])` + ipv6 + `(?:%[0-9A-Za-z._-]+)?(?![0-9A-Fa-f:.])`,
+			Pattern: `(?<![0-9A-Za-z_.:])` + ipv6 + `(?:%[0-9A-Za-z._-]+)?(?![0-9A-Za-z_.:])`,
 			Style:   "endpoint",
 		},
 		{
