@@ -55,7 +55,7 @@ Keep policy at the owning layer. In particular, do not move matching into the re
 
 ## Release procedure
 
-`internal/cli/version.go` owns version metadata and currently declares `1.0.0`. Update that source value for every release.
+`internal/cli/version.go` owns version metadata and currently declares `1.0.1`. Update that source value for every release.
 
 Before handing the tree to Git release operations:
 
@@ -70,4 +70,4 @@ Also exercise a real ANSI-preserving pipeline and a downstream pipe closure. The
 
 Git staging, commits, tags, and pushes are separate maintainer actions.
 
-`.github/workflows/test.yml` enforces formatting, vetting, and tests on pushes and pull requests. `.github/workflows/release.yml` runs only after Test succeeds for a repository-owned `v*` tag push, verifies the tag, tested commit, and `internal/cli.Version` agree, then creates a GitHub Release with generated notes. It intentionally publishes no binary artifacts; installation remains the standard Go module flow.
+`.github/workflows/test.yml` enforces formatting, vetting, and tests on pushes and pull requests. `.github/workflows/release.yml` runs only after Test succeeds for a repository-owned `v*` tag push, verifies the tag, tested commit, and `internal/cli.Version` agree, creates a GitHub Release with generated notes, then requests the tagged module through `proxy.golang.org` so pkg.go.dev can index it. It intentionally publishes no binary artifacts; installation remains the standard Go module flow.

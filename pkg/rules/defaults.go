@@ -2,9 +2,12 @@ package rules
 
 const (
 	isoDate      = `\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\d|30)|02-(?:0[1-9]|1\d|2[0-9]))`
+	isoHour      = `(?:[01]\d|2[0-3])`
+	isoMinute    = `[0-5]\d`
+	isoSecond    = `(?:[0-5]\d|60)(?:[.,]\d+)?`
+	isoOffset    = `(?:Z|[+-]` + isoHour + `(?::?` + isoMinute + `)?)`
+	isoTimestamp = isoDate + `[T ]` + isoHour + `:?` + isoMinute + `(?::?` + isoSecond + `)?` + isoOffset + `?`
 	clockTime    = `(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d`
-	isoOffset    = `(?:Z|[+-](?:(?:0\d|1[0-3]):?[0-5]\d|14:?00))`
-	isoTimestamp = isoDate + `T` + clockTime + `(?:[.,]\d+)?` + isoOffset + `?`
 	syslogMonth  = `(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)`
 	syslogDate   = syslogMonth + ` (?: [1-9]|[12]\d|3[01])`
 	ipv4Octet    = `(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)`
@@ -44,7 +47,7 @@ func Default() File {
 		},
 		{
 			Name:    "default-iso-timestamp",
-			Pattern: `(?<![0-9A-Za-z_])` + isoTimestamp + `(?![0-9A-Za-z_]|[.,]\d|[+-]\d)`,
+			Pattern: `(?<![0-9A-Za-z_])` + isoTimestamp + `(?![0-9A-Za-z_]|[.,]\d|[+-]\d|:\d)`,
 			Style:   "timestamp",
 		},
 		{
