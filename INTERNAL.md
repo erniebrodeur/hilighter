@@ -68,4 +68,6 @@ go build -o hilighter ./cmd/hilighter
 
 Also exercise a real ANSI-preserving pipeline and a downstream pipe closure. The latter must produce no diagnostic and must remain nonzero. Inspect tracked release content for secrets, personal paths, stale interface references, and generated binaries.
 
-Git staging, commits, tags, pushes, and GitHub releases are separate maintainer actions.
+Git staging, commits, tags, and pushes are separate maintainer actions.
+
+`.github/workflows/test.yml` enforces formatting, vetting, and tests on pushes and pull requests. `.github/workflows/release.yml` runs vet and tests for `v*` tags, requires the tag to equal `v` plus `internal/cli.Version`, and creates a GitHub Release with generated notes. It intentionally publishes no binary artifacts; installation remains the standard Go module flow.
