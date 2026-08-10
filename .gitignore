@@ -1,7 +1,5 @@
 # Local development
 dev.db
-docker.yaml
-docker-samples/
 tmp/
 
 # Binaries and build output
