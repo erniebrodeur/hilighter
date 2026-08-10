@@ -1,240 +1,153 @@
 # hilighter
 
-`hilighter` is a CLI for colorizing terminal output that is plain, inconsistent, or too noisy by default.
+`hilighter` adds useful ANSI color to plain or noisy terminal text while behaving like a small Unix filter.
 
-It is built for normal terminal workflows:
-
-- pipe output through it
-- run a command through it
-- use it as a drop-in `tail`, `cat`, or `head` wrapper
+It reads stdin or text files, highlights every non-overlapping match, and writes the original text with ANSI styling added. Existing ANSI sequences are preserved.
 
 ## Install
+
+Requires Go 1.25 or newer.
 
 ```bash
 go install github.com/erniebrodeur/hilighter/cmd/hilighter@latest
 ```
 
-## Version
+## Usage
 
-Print the app version marker:
-
-```bash
+```text
+hilighter [-e <pattern> ...] [-t <theme>] [--] [file ...]
+hilighter --help
 hilighter --version
-hilighter version
 ```
 
-Release builds can stamp a version like `hilighter-1.0.0` with:
+Highlight a command's output:
 
 ```bash
-go build -ldflags "-X github.com/erniebrodeur/hilighter/internal/cli.Version=1.0.0" -o hilighter ./cmd/hilighter
+go test ./... 2>&1 | hilighter
 ```
+
+Highlight one or more files in order:
+
+```bash
+hilighter application.log archive.log
+```
+
+With no file operands, `hilighter` reads stdin. A `-` operand reads stdin at that position, and `--` permits dash-prefixed filenames:
+
+```bash
+hilighter before.log - after.log
+hilighter -- -server.log
+```
+
+Use repeated `-e` flags to replace the configured and built-in rules with PCRE expressions. Expressions are evaluated in order and use the `accent` style:
+
+```bash
+some-command | hilighter -e '(?i)failed' -e '\b[1-9][0-9]* errors?\b'
+```
+
+Select a custom theme with `-t`:
+
+```bash
+some-command | hilighter -t themes/solarized.yaml
+```
+
+Relative theme paths resolve from `~/.hilighter`.
+
+## Default highlighting
+
+When no expressions or custom rules are selected, the shipped rules highlight:
+
+- IPv4 and IPv6 addresses
+- URLs containing a scheme such as `https://`
+- email addresses
+- `TRACE`, `DEBUG`, `INFO`, `NOTICE`, `WARN`, `WARNING`, `ERROR`, and `FATAL`, case-insensitively
+
+Earlier rules win when matches overlap. Every other non-overlapping occurrence is highlighted.
 
 ## Configuration
 
-The default config directory is:
-
-```bash
-~/.hilighter
-```
-
-Typical layout:
+On first run, `hilighter` creates:
 
 ```text
 ~/.hilighter/
 ├── config.yaml
 ├── rules.yaml
 └── themes/
-    └── default.yaml
 ```
 
-Example `config.yaml`:
+The initial `config.yaml` selects the compiled Monokai theme:
 
 ```yaml
-rules: ~/.hilighter/rules.yaml
-theme: ~/.hilighter/themes/default.yaml
-
-profiles:
-  rails-log:
-    rules: ~/.hilighter/rules/rails.yaml
-    theme: ~/.hilighter/themes/default.yaml
-    file: log/development.log
-
-  docker-info:
-    app: docker
+theme: monokai
 ```
 
-Example `rules.yaml`:
+The initial `rules.yaml` is empty, which selects the shipped rules. A non-empty file replaces them. Rules use PCRE patterns and are evaluated in file order:
 
 ```yaml
 rules:
-  - name: error
-    pattern: '(ERROR|FATAL):\s+(.*)'
+  - name: failure
+    pattern: '(?i)failed'
     style: error
 
-  - name: warning
-    pattern: '^warning:'
+  - name: request
+    pattern: '(GET|POST)\s+(\S+)'
+    groups:
+      "1": info
+      "2": endpoint
+
+  - name: warning-line
+    pattern: '(?i)warning'
     scope: line
     style: warning
-
-  - name: test-fail
-    pattern: '^--- FAIL: (.+)$'
-    groups:
-      "1": test-name
 ```
 
-If you want a custom theme file, start from [examples/themes/default.yaml](/Users/ebrodeur/Projects/hilighter/examples/themes/default.yaml).
+`scope` may be `substring`, the default, or `line`. `groups` maps capture-group numbers to semantic style names. See [examples/rules/go-test.yaml](examples/rules/go-test.yaml) for another rule set.
 
-## Usage
+Custom themes overlay the built-in theme, so only changed styles need to be specified:
 
-Common examples:
+```yaml
+styles:
+  error:
+    fg: white
+    bg: red
+    bold: true
+  endpoint:
+    fg: cyan
+```
+
+Set the theme in `config.yaml` using a path relative to `~/.hilighter`:
+
+```yaml
+theme: themes/custom.yaml
+```
+
+Supported color names are `black`, `blue`, `cyan`, `gray`, `green`, `magenta`, `orange`, `pink`, `red`, `white`, and `yellow`. See [examples/themes/default.yaml](examples/themes/default.yaml) for a complete theme.
+
+Rule-source precedence is repeated `-e`, then a non-empty `~/.hilighter/rules.yaml`, then shipped rules. Theme precedence is `-t`, then `config.yaml`, then compiled Monokai.
+
+## Pipelines and errors
+
+Preserve ANSI colors when paging:
 
 ```bash
-docker info 2>&1 | hilighter --app docker
-docker info 2>&1 | hilighter docker-info
-hilighter --cmd "go test ./..." --app go-test
-hilighter tail log/development.log
-hilighter cat rails-log
-hilighter validate
-hilighter list apps
-hilighter show app docker
+some-command 2>&1 | hilighter | less -R
 ```
 
-Pipe mode:
+Input errors are written to stderr as they occur. Later file operands continue processing, and the final status is nonzero. Output errors stop processing immediately. A downstream broken pipe stops quietly without a redundant diagnostic and remains a nonzero exit.
+
+`hilighter` processes text streams. Binary-file support is out of scope.
+
+## Version
 
 ```bash
-some-command 2>&1 | hilighter --rules ~/.hilighter/rules.yaml
-some-command 2>&1 | hilighter rails-log
+hilighter --version
 ```
 
-Show help:
+Release builds can stamp the version at link time:
 
 ```bash
-hilighter
+go build -ldflags "-X github.com/erniebrodeur/hilighter/internal/cli.Version=1.0.0" -o hilighter ./cmd/hilighter
+./hilighter --version
 ```
 
-Command mode:
-
-```bash
-hilighter --cmd "some-command 2>&1" --rules ~/.hilighter/rules.yaml
-```
-
-If stdin is piped, `hilighter` reads the piped input instead of running an app profile's default command.
-
-If you already saved a profile in `~/.hilighter/config.yaml`, you can select it
-directly in pipe mode:
-
-```bash
-some-command 2>&1 | hilighter sally-go
-```
-
-That resolves the profile's `rules`, `theme`, and optional `app` defaults, then
-still reads the piped stdin instead of trying to run a default command.
-
-## Built-In Profiles
-
-Current built-ins:
-
-- `docker`
-- `syslog`
-- `brew`
-- `go-test`
-- `compiler`
-- `logs`
-
-Some app profiles include a default command when you run them directly:
-
-- `docker` -> `docker ps -a`
-- `syslog` -> `/usr/bin/log stream --style syslog`
-
-## CLI Flags
-
-```text
---app         built-in profile to use
---rules       path to a rules YAML file
---theme       path to a theme YAML file
---cmd         command to run through hilighter
---config-dir  config directory (default: ~/.hilighter)
---no-detect   disable file-mode auto-detection
---debug-detect print file-mode detection decisions
-```
-
-## File Modes
-
-`tail`, `cat`, and `head` are meant to work as practical drop-in aliases.
-
-```bash
-hilighter tail <profile> [file]
-hilighter tail <file>
-hilighter cat <profile> [file]
-hilighter cat <file>
-hilighter head <profile> [file]
-hilighter head <file>
-```
-
-Examples:
-
-```bash
-hilighter tail rails-log
-hilighter tail rails-log log/production.log
-hilighter tail log/development.log
-hilighter cat rails-log
-hilighter cat log/development.log
-hilighter head rails-log
-hilighter head log/development.log
-```
-
-Resolution rules:
-
-- if the first argument matches a saved profile, it is treated as the profile name
-- otherwise the first argument is treated as the file target
-- when using a profile, the optional third argument overrides the profile's `file` value
-- if the third argument is omitted, the profile's `file` value is used
-- relative file paths are resolved from `./`
-- absolute file paths are used as-is
-- for direct file targets, hilighter tries to auto-detect highlighting from matching saved profile file paths, `~/.hilighter/rules/*.yaml`, or obvious built-in names in the path
-- if nothing matches, the command still runs as plain `tail`, `cat`, or `head`
-
-Detection controls:
-
-```bash
-hilighter --no-detect tail log/development.log
-hilighter --debug-detect tail log/development.log
-```
-
-`--debug-detect` prints the detection decision to stderr. `--no-detect` disables
-auto-detection and runs the file mode plainly unless you selected rules or an
-app yourself.
-
-## Inspect And Validate
-
-List built-ins and local profiles:
-
-```bash
-hilighter list apps
-hilighter list profiles
-```
-
-Show one app or profile:
-
-```bash
-hilighter show app docker
-hilighter show profile rails-log
-```
-
-Validate your config and referenced assets:
-
-```bash
-hilighter validate
-hilighter validate --rules ~/.hilighter/rules.yaml --theme ~/.hilighter/themes/default.yaml
-hilighter validate --app docker
-```
-
-## Theme Notes
-
-The default theme is terminal-friendly and restrained:
-
-- errors are high contrast
-- warnings are easy to spot
-- Docker hostnames, IPs, and ports are emphasized
-
-You can override any of that with your own theme YAML.
+Module-aware builds use their embedded module version automatically, including tagged `go install ...@latest` builds and local VCS pseudo-versions. An explicit linker value takes precedence. A build without usable version metadata reports `hilighter-dev`.

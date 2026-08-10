@@ -1,8 +1,8 @@
 // Package theme owns semantic style resolution for output rendering.
 //
 // Themes map semantic labels such as "error" or "test-name" onto concrete
-// terminal styles. The default theme direction for hilighter is Monokai-like
-// foreground styling without background colors.
+// terminal styles. Hilighter's default theme is Monokai-like and includes a
+// high-contrast background for errors.
 package theme
 
 import (

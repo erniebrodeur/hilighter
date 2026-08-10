@@ -1,2 +1,2 @@
-// Package ansi will own ANSI escape sequence rendering.
+// Package ansi owns ANSI escape sequence rendering.
 package ansi
