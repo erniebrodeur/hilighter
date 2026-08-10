@@ -1,57 +1,12 @@
 package cli
 
-import (
-	"runtime/debug"
-	"testing"
-)
+import "testing"
 
-func TestFormattedVersionPrefersLinkerOverride(t *testing.T) {
-	previousVersion := Version
-	previousReadBuildInfo := readBuildInfo
-	t.Cleanup(func() {
-		Version = previousVersion
-		readBuildInfo = previousReadBuildInfo
-	})
-	Version = "2.0.0"
-	readBuildInfo = func() (*debug.BuildInfo, bool) {
-		return &debug.BuildInfo{Main: debug.Module{Version: "v1.0.0"}}, true
+func TestFormattedVersionUsesSourceVersion(t *testing.T) {
+	if Version != "1.0.0" {
+		t.Fatalf("expected source version 1.0.0, got %q", Version)
 	}
-
-	if got := formattedVersion(); got != "hilighter-2.0.0" {
-		t.Fatalf("expected linker version, got %q", got)
-	}
-}
-
-func TestFormattedVersionUsesEmbeddedModuleVersion(t *testing.T) {
-	previousVersion := Version
-	previousReadBuildInfo := readBuildInfo
-	t.Cleanup(func() {
-		Version = previousVersion
-		readBuildInfo = previousReadBuildInfo
-	})
-	Version = "dev"
-	readBuildInfo = func() (*debug.BuildInfo, bool) {
-		return &debug.BuildInfo{Main: debug.Module{Version: "v1.2.3"}}, true
-	}
-
-	if got := formattedVersion(); got != "hilighter-1.2.3" {
-		t.Fatalf("expected tagged module version, got %q", got)
-	}
-}
-
-func TestFormattedVersionFallsBackToDev(t *testing.T) {
-	previousVersion := Version
-	previousReadBuildInfo := readBuildInfo
-	t.Cleanup(func() {
-		Version = previousVersion
-		readBuildInfo = previousReadBuildInfo
-	})
-	Version = "dev"
-	readBuildInfo = func() (*debug.BuildInfo, bool) {
-		return &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}, true
-	}
-
-	if got := formattedVersion(); got != "hilighter-dev" {
-		t.Fatalf("expected development version, got %q", got)
+	if got := formattedVersion(); got != "hilighter-1.0.0" {
+		t.Fatalf("expected source version output, got %q", got)
 	}
 }

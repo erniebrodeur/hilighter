@@ -86,14 +86,11 @@ var _ = Describe("run", func() {
 	It("prints the version without reading input", func() {
 		input := &countingReader{}
 		var stdout bytes.Buffer
-		previous := Version
-		Version = "1.2.3"
-		DeferCleanup(func() { Version = previous })
 
 		err := run([]string{"--version"}, input, &stdout, io.Discard, GinkgoT().TempDir())
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stdout.String()).To(Equal("hilighter-1.2.3\n"))
+		Expect(stdout.String()).To(Equal("hilighter-1.0.0\n"))
 		Expect(input.reads).To(BeZero())
 	})
 

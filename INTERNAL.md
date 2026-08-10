@@ -53,14 +53,14 @@ Keep policy at the owning layer. In particular, do not move matching into the re
 
 ## Release procedure
 
-`internal/cli/version.go` owns version metadata. Module-aware builds use Go's embedded main-module version, which may be a release tag or VCS pseudo-version. An explicit `-ldflags` value takes precedence. Builds without usable module metadata use `dev`.
+`internal/cli/version.go` owns version metadata and currently declares `1.0.0`. Update that source value for every release.
 
 Before handing the tree to Git release operations:
 
 ```bash
 go test -count=1 ./...
 go vet ./...
-go build -ldflags "-X github.com/erniebrodeur/hilighter/internal/cli.Version=1.0.0" -o hilighter ./cmd/hilighter
+go build -o hilighter ./cmd/hilighter
 ./hilighter --version
 ```
 

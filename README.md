@@ -143,11 +143,11 @@ Input errors are written to stderr as they occur. Later file operands continue p
 hilighter --version
 ```
 
-Release builds can stamp the version at link time:
+Source builds report `hilighter-1.0.0`:
 
 ```bash
-go build -ldflags "-X github.com/erniebrodeur/hilighter/internal/cli.Version=1.0.0" -o hilighter ./cmd/hilighter
+go build -o hilighter ./cmd/hilighter
 ./hilighter --version
 ```
 
-Module-aware builds use their embedded module version automatically, including tagged `go install ...@latest` builds and local VCS pseudo-versions. An explicit linker value takes precedence. A build without usable version metadata reports `hilighter-dev`.
+Update `internal/cli/version.go` when preparing each release.
