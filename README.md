@@ -45,13 +45,40 @@ Use repeated `-e` flags to replace the configured and built-in rules with PCRE e
 some-command | hilighter -e '(?i)failed' -e '\b[1-9][0-9]* errors?\b'
 ```
 
-Select a custom theme with `-t`:
+Select a built-in theme with `-t`:
+
+```bash
+some-command | hilighter -t dark-plus
+```
+
+Or select a custom theme file:
 
 ```bash
 some-command | hilighter -t themes/solarized.yaml
 ```
 
 Relative theme paths resolve from `~/.hilighter`.
+
+## Built-in themes
+
+Hilighter ships 12 dark themes adapted from the palettes bundled with Visual Studio Code:
+
+| Theme | Selector |
+| --- | --- |
+| Abyss | `abyss` |
+| Dark 2026 | `dark-2026` |
+| Dark Modern | `dark-modern` |
+| Dark+ | `dark-plus` |
+| Default High Contrast | `high-contrast` |
+| Kimbie Dark | `kimbie-dark` |
+| Monokai, default | `monokai` |
+| Monokai Dimmed | `monokai-dimmed` |
+| Red | `red` |
+| Solarized Dark | `solarized-dark` |
+| Tomorrow Night Blue | `tomorrow-night-blue` |
+| Visual Studio Dark | `visual-studio-dark` |
+
+Use a selector with `-t` or as the `theme` value in `~/.hilighter/config.yaml`.
 
 ## Default highlighting
 
@@ -121,7 +148,7 @@ Set the theme in `config.yaml` using a path relative to `~/.hilighter`:
 theme: themes/custom.yaml
 ```
 
-Colors may be exact `#RRGGBB` truecolor values or the names `black`, `blue`, `cyan`, `gray`, `green`, `magenta`, `orange`, `pink`, `red`, `white`, and `yellow`. See [examples/themes/default.yaml](examples/themes/default.yaml) for a complete theme.
+Colors may be exact `#RRGGBB` truecolor values or the names `black`, `blue`, `cyan`, `gray`, `green`, `magenta`, `orange`, `pink`, `red`, `white`, and `yellow`. See [examples/themes/default.yaml](examples/themes/default.yaml) for a complete Monokai theme.
 
 Rule-source precedence is repeated `-e`, then a non-empty `~/.hilighter/rules.yaml`, then shipped rules. Theme precedence is `-t`, then `config.yaml`, then compiled Monokai.
 
@@ -151,3 +178,7 @@ go build -o hilighter ./cmd/hilighter
 ```
 
 Update `internal/cli/version.go` when preparing each release.
+
+## License
+
+Hilighter is licensed under [GPL-3.0-only](LICENSE). Palette data adapted from Visual Studio Code retains its upstream MIT notice in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

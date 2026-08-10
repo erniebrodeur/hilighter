@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#10120f">
+  <meta name="description" content="hilighter adds useful ANSI color to plain or noisy terminal text while behaving like a small Unix filter.">
+  <meta property="og:title" content="hilighter | Find the signal in terminal noise">
+  <meta property="og:description" content="A small Unix filter that adds ANSI highlighting to stdin and text files.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://erniebrodeur.github.io/hilighter/">
+  <link rel="canonical" href="https://erniebrodeur.github.io/hilighter/">
+  <link rel="stylesheet" href="styles.css">
+  <title>hilighter | ANSI highlighting for terminal text</title>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <a class="wordmark" href="#top" aria-label="hilighter home">
+      <span class="wordmark-mark" aria-hidden="true">//</span>hilighter
+    </a>
+    <nav aria-label="Primary navigation">
+      <a href="#quickstart">Quickstart</a>
+      <a href="#themes">Themes</a>
+      <a href="#customize">Customize</a>
+      <a href="#reference">Reference</a>
+      <a class="nav-github" href="https://github.com/erniebrodeur/hilighter">GitHub <span aria-hidden="true">↗</span></a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> v1.0.0 · built in Go</p>
+        <h1>Find the signal in <span>terminal noise.</span></h1>
+        <p class="hero-summary">Add useful ANSI color to logs, test output, and plain text without changing the way Unix pipelines work.</p>
+
+        <div class="install-command" aria-label="Installation command">
+          <code id="install-code">go install github.com/erniebrodeur/hilighter/cmd/hilighter@latest</code>
+          <button class="copy-button" type="button" data-copy-target="install-code" aria-label="Copy installation command">Copy</button>
+        </div>
+
+        <div class="hero-actions">
+          <a class="button button-primary" href="#quickstart">Start highlighting</a>
+          <a class="button button-secondary" href="https://github.com/erniebrodeur/hilighter">View source</a>
+        </div>
+      </div>
+
+      <div class="terminal" aria-label="Example highlighted terminal output">
+        <div class="terminal-bar">
+          <div class="terminal-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+          <span>deploy.log · hilighter</span>
+          <span class="terminal-live">live</span>
+        </div>
+        <pre><code><span class="muted">$</span> deploy --env production <span class="muted">|</span> hilighter
+
+<span class="timestamp">21:04:18.029</span> <span class="info">INFO</span>  service started
+<span class="timestamp">21:04:18.117</span> <span class="detail">DEBUG</span> listening on <span class="endpoint">10.0.4.12:8080</span>
+<span class="timestamp">21:04:19.442</span> <span class="notice">NOTICE</span> connected to <span class="accent">ops@example.com</span>
+<span class="timestamp">21:04:21.005</span> <span class="warning">WARN</span>  cache response took 843ms
+<span class="timestamp">21:04:22.801</span> <span class="error">ERROR</span> upstream unavailable
+
+<span class="muted">stream continues...</span><span class="cursor" aria-hidden="true"></span></code></pre>
+      </div>
+    </section>
+
+    <section class="proof-strip" aria-label="Core capabilities">
+      <div><strong>stdin</strong><span>pipe anything</span></div>
+      <div><strong>files</strong><span>read in order</span></div>
+      <div><strong>PCRE</strong><span>match precisely</span></div>
+      <div><strong>ANSI-safe</strong><span>preserve color</span></div>
+    </section>
+
+    <section class="section" id="quickstart">
+      <div class="section-heading">
+        <p class="section-kicker">01 / Quickstart</p>
+        <h2>A filter, not a framework.</h2>
+        <p>Put it where text already flows. There is no daemon, pager, command runner, or hidden terminal detection.</p>
+      </div>
+
+      <div class="workflow-grid">
+        <article class="workflow-card featured-card">
+          <div class="card-number">01</div>
+          <h3>Pipe command output</h3>
+          <p>Highlight stdout and stderr together while preserving every original byte.</p>
+          <div class="code-block">
+            <code id="pipe-code">go test ./... 2&gt;&amp;1 | hilighter</code>
+            <button class="copy-button" type="button" data-copy-target="pipe-code" aria-label="Copy pipeline example">Copy</button>
+          </div>
+        </article>
+
+        <article class="workflow-card">
+          <div class="card-number">02</div>
+          <h3>Read files</h3>
+          <p>Process multiple files in order, with highlighting state reset at every boundary.</p>
+          <div class="code-block"><code>hilighter app.log archive.log</code></div>
+        </article>
+
+        <article class="workflow-card">
+          <div class="card-number">03</div>
+          <h3>Add an expression</h3>
+          <p>Repeated <code>-e</code> flags replace configured rules and run in declaration order.</p>
+          <div class="code-block"><code>build | hilighter -e '(?i)failed'</code></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section signal-section">
+      <div class="section-heading compact-heading">
+        <p class="section-kicker">Useful by default</p>
+        <h2>The important parts stand out immediately.</h2>
+      </div>
+      <div class="signal-grid">
+        <div class="signal-card"><span class="signal-sample endpoint">https://api.example.dev/v1</span><h3>Endpoints</h3><p>URLs, IPv4, and IPv6 addresses.</p></div>
+        <div class="signal-card"><span class="signal-sample accent">deploys@example.dev</span><h3>Addresses</h3><p>Practical email matching without bare-domain noise.</p></div>
+        <div class="signal-card"><span class="signal-sample error">FATAL</span><h3>Severity</h3><p>Trace through fatal, styled by meaning.</p></div>
+      </div>
+    </section>
+
+    <section class="section" id="themes">
+      <div class="section-heading">
+        <p class="section-kicker">02 / Themes</p>
+        <h2>Twelve dark palettes. Zero setup.</h2>
+        <p>Every theme ships inside the binary and uses truecolor output. Select one with <code>-t</code> or save its slug in <code>~/.hilighter/config.yaml</code>.</p>
+      </div>
+
+      <div class="theme-grid">
+        <article class="theme-card" style="--theme-a:#78ffff;--theme-b:#ff7882;--theme-c:#b8f171"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Abyss</h3><code>abyss</code></article>
+        <article class="theme-card" style="--theme-a:#48a0c7;--theme-b:#f48771;--theme-c:#72c892"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Dark 2026</h3><code>dark-2026</code></article>
+        <article class="theme-card" style="--theme-a:#9cdcfe;--theme-b:#f85149;--theme-c:#4ec9b0"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Dark Modern</h3><code>dark-modern</code></article>
+        <article class="theme-card" style="--theme-a:#9cdcfe;--theme-b:#f44747;--theme-c:#dcdcaa"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Dark+</h3><code>dark-plus</code></article>
+        <article class="theme-card" style="--theme-a:#ffffff;--theme-b:#f48771;--theme-c:#4ec9b0"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>High Contrast</h3><code>high-contrast</code></article>
+        <article class="theme-card" style="--theme-a:#8ab1b0;--theme-b:#dc3958;--theme-c:#f79a32"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Kimbie Dark</h3><code>kimbie-dark</code></article>
+        <article class="theme-card default-theme" style="--theme-a:#66d9ef;--theme-b:#f92672;--theme-c:#a6e22e"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Monokai <span>default</span></h3><code>monokai</code></article>
+        <article class="theme-card" style="--theme-a:#6089b4;--theme-b:#c7444a;--theme-c:#9aa83a"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Monokai Dimmed</h3><code>monokai-dimmed</code></article>
+        <article class="theme-card" style="--theme-a:#ffb454;--theme-b:#ff0000;--theme-c:#ffe862"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Red</h3><code>red</code></article>
+        <article class="theme-card" style="--theme-a:#2aa198;--theme-b:#dc322f;--theme-c:#859900"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Solarized Dark</h3><code>solarized-dark</code></article>
+        <article class="theme-card" style="--theme-a:#78ffff;--theme-b:#ff7882;--theme-c:#ffe580"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Tomorrow Night Blue</h3><code>tomorrow-night-blue</code></article>
+        <article class="theme-card" style="--theme-a:#9cdcfe;--theme-b:#f44747;--theme-c:#b5cea8"><div class="theme-swatches"><i></i><i></i><i></i></div><h3>Visual Studio Dark</h3><code>visual-studio-dark</code></article>
+      </div>
+
+      <div class="theme-command"><code>some-command | hilighter -t solarized-dark</code></div>
+    </section>
+
+    <section class="section" id="customize">
+      <div class="section-heading">
+        <p class="section-kicker">03 / Customize</p>
+        <h2>Your rules. Your colors.</h2>
+        <p>First run creates a small customization directory. Empty rules use the shipped defaults, while non-empty rules replace them. Custom themes overlay Monokai, so they only need to define the styles they change.</p>
+      </div>
+
+      <div class="customize-grid">
+        <article class="editor-card">
+          <div class="editor-label"><span>~/.hilighter/rules.yaml</span><span>PCRE</span></div>
+          <pre><code><span class="yaml-key">rules</span>:
+  - <span class="yaml-key">name</span>: failure
+    <span class="yaml-key">pattern</span>: <span class="yaml-value">'(?i)failed'</span>
+    <span class="yaml-key">style</span>: error
+
+  - <span class="yaml-key">name</span>: request
+    <span class="yaml-key">pattern</span>: <span class="yaml-value">'(GET|POST)\s+(\S+)'</span>
+    <span class="yaml-key">groups</span>:
+      <span class="yaml-value">"1"</span>: info
+      <span class="yaml-value">"2"</span>: endpoint</code></pre>
+        </article>
+
+        <article class="editor-card">
+          <div class="editor-label"><span>~/.hilighter/themes/custom.yaml</span><span>truecolor</span></div>
+          <pre><code><span class="yaml-key">styles</span>:
+  <span class="yaml-key">error</span>:
+    <span class="yaml-key">fg</span>: <span class="yaml-value">'#f8f8f2'</span>
+    <span class="yaml-key">bg</span>: <span class="yaml-value">'#f92672'</span>
+    <span class="yaml-key">bold</span>: true
+
+  <span class="yaml-key">endpoint</span>:
+    <span class="yaml-key">fg</span>: <span class="yaml-value">'#66d9ef'</span>
+    <span class="yaml-key">bold</span>: true</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reference-section" id="reference">
+      <div class="section-heading compact-heading">
+        <p class="section-kicker">04 / Reference</p>
+        <h2>One command. Four switches.</h2>
+      </div>
+
+      <div class="reference-shell">
+        <div class="usage-line"><code>hilighter [-e &lt;pattern&gt; ...] [-t &lt;theme&gt;] [--] [file ...]</code></div>
+        <dl class="flag-list">
+          <div><dt><code>-e &lt;pattern&gt;</code></dt><dd>Add an ordered PCRE expression. Repeat as needed.</dd></div>
+          <div><dt><code>-t &lt;theme&gt;</code></dt><dd>Select a built-in theme or a custom theme path.</dd></div>
+          <div><dt><code>--</code></dt><dd>Stop option parsing and permit dash-prefixed filenames.</dd></div>
+          <div><dt><code>-</code></dt><dd>Read stdin at this position among file operands.</dd></div>
+          <div><dt><code>--help</code></dt><dd>Print the complete public grammar.</dd></div>
+          <div><dt><code>--version</code></dt><dd>Print <code>hilighter-1.0.0</code>.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="section pipeline-section">
+      <div>
+        <p class="section-kicker">Plays well downstream</p>
+        <h2>Color survives the pipeline.</h2>
+        <p>Existing ANSI sequences pass through untouched. Use <code>less -R</code> to keep colors while paging. Broken pipes stop quietly without hiding other output errors.</p>
+      </div>
+      <div class="pipeline-command"><code>some-command 2&gt;&amp;1 <b>|</b> hilighter <b>|</b> less -R</code></div>
+    </section>
+
+    <section class="closing-section">
+      <p class="section-kicker">Less noise. Same workflow.</p>
+      <h2>Make terminal output readable.</h2>
+      <div class="hero-actions closing-actions">
+        <a class="button button-primary" href="https://github.com/erniebrodeur/hilighter">Get hilighter on GitHub</a>
+        <a class="button button-secondary" href="#top">Back to top</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="wordmark footer-mark" href="#top"><span class="wordmark-mark" aria-hidden="true">//</span>hilighter</a>
+    <p>A small Unix filter for terminal text.</p>
+    <p>© <span id="year">2026</span> · <a href="https://github.com/erniebrodeur/hilighter">Source on GitHub</a> · <a href="https://github.com/erniebrodeur/hilighter/blob/main/LICENSE">GPL-3.0-only</a></p>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

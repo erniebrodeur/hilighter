@@ -50,7 +50,7 @@ var _ = Describe("RunStdin", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(output.String()).To(ContainSubstring("\x1b[32malready green\x1b[0m"))
-		Expect(output.String()).To(ContainSubstring(";41mERROR\x1b[0m"))
+		Expect(output.String()).To(ContainSubstring(";48;2;249;38;114mERROR\x1b[0m"))
 	})
 
 	It("preserves ANSI sequences through a streaming pipeline", func() {
@@ -76,7 +76,7 @@ var _ = Describe("RunStdin", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(<-writeDone).NotTo(HaveOccurred())
 		Expect(output.String()).To(ContainSubstring("\x1b[36mcyan\x1b[0m"))
-		Expect(output.String()).To(ContainSubstring(";41mERROR\x1b[0m"))
+		Expect(output.String()).To(ContainSubstring(";48;2;249;38;114mERROR\x1b[0m"))
 		Expect(output.String()).NotTo(Equal(input))
 	})
 })

@@ -37,6 +37,8 @@ Theme precedence is `-t`, the selector in `~/.hilighter/config.yaml`, then compi
 
 Built-in themes are selected through stable lowercase slugs in `pkg/theme`. Registry lookups return defensive copies. Theme colors support existing named colors and exact `#RRGGBB` values rendered as ANSI truecolor.
 
+The shipped selectors are `abyss`, `dark-2026`, `dark-modern`, `dark-plus`, `high-contrast`, `kimbie-dark`, `monokai`, `monokai-dimmed`, `red`, `solarized-dark`, `tomorrow-night-blue`, and `visual-studio-dark`. These semantic palettes are adapted from the dark themes bundled with Visual Studio Code. Keep `THIRD_PARTY_NOTICES.md` when changing or redistributing them.
+
 First run creates `config.yaml` containing only `theme: monokai`, an empty `rules.yaml`, and an empty `themes/` directory. Compiled defaults are not copied into the user directory. Legacy config and rule metadata are rejected rather than migrated.
 
 ## Package ownership

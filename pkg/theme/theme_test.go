@@ -22,26 +22,26 @@ var _ = Describe("Theme loading", func() {
 		Expect(th.Styles["error"].Bold).To(BeTrue())
 	})
 
-	It("ships a Monokai-style default theme", func() {
+	It("ships a truecolor Monokai default theme", func() {
 		th := theme.Default()
 
 		Expect(th.Styles).To(HaveKey("error"))
-		Expect(th.Styles["error"].FG).To(Equal("white"))
-		Expect(th.Styles["error"].BG).To(Equal("red"))
+		Expect(th.Styles["error"].FG).To(Equal("#f8f8f2"))
+		Expect(th.Styles["error"].BG).To(Equal("#f92672"))
 		Expect(th.Styles).To(HaveKey("warning"))
-		Expect(th.Styles["warning"].FG).To(Equal("yellow"))
+		Expect(th.Styles["warning"].FG).To(Equal("#e6db74"))
 		Expect(th.Styles["warning"].Bold).To(BeTrue())
 		Expect(th.Styles).To(HaveKey("bool-true"))
-		Expect(th.Styles["bool-true"].FG).To(Equal("green"))
+		Expect(th.Styles["bool-true"].FG).To(Equal("#a6e22e"))
 		Expect(th.Styles["bool-true"].Bold).To(BeTrue())
 		Expect(th.Styles).To(HaveKey("bool-false"))
-		Expect(th.Styles["bool-false"].FG).To(Equal("red"))
+		Expect(th.Styles["bool-false"].FG).To(Equal("#f92672"))
 		Expect(th.Styles["bool-false"].Bold).To(BeTrue())
 		Expect(th.Styles).To(HaveKey("endpoint"))
-		Expect(th.Styles["endpoint"].FG).To(Equal("orange"))
+		Expect(th.Styles["endpoint"].FG).To(Equal("#819aff"))
 		Expect(th.Styles["endpoint"].Bold).To(BeTrue())
 		Expect(th.Styles).To(HaveKey("test-name"))
-		Expect(th.Styles["test-name"].FG).To(Equal("green"))
+		Expect(th.Styles["test-name"].FG).To(Equal("#a6e22e"))
 		Expect(th.Styles).To(HaveKey("timestamp"))
 		Expect(th.Styles).To(HaveKey("host"))
 		Expect(th.Styles["host"].Bold).To(BeTrue())
@@ -53,8 +53,32 @@ var _ = Describe("Theme loading", func() {
 		Expect(th.Styles["info"].Bold).To(BeTrue())
 	})
 
-	It("registers Monokai as an isolated built-in theme", func() {
-		Expect(theme.BuiltinNames()).To(Equal([]string{"monokai"}))
+	It("registers every dark theme as an isolated built-in", func() {
+		Expect(theme.BuiltinNames()).To(Equal([]string{
+			"abyss",
+			"dark-2026",
+			"dark-modern",
+			"dark-plus",
+			"high-contrast",
+			"kimbie-dark",
+			"monokai",
+			"monokai-dimmed",
+			"red",
+			"solarized-dark",
+			"tomorrow-night-blue",
+			"visual-studio-dark",
+		}))
+
+		for _, name := range theme.BuiltinNames() {
+			builtIn, ok := theme.Builtin(name)
+			Expect(ok).To(BeTrue(), name)
+			Expect(builtIn.Styles).To(HaveLen(14), name)
+			for _, label := range []string{"accent", "bool-false", "bool-true", "detail", "endpoint", "error", "host", "info", "notice", "process", "repeat", "test-name", "timestamp", "warning"} {
+				Expect(builtIn.Styles).To(HaveKey(label), "%s: %s", name, label)
+				Expect(builtIn.Styles[label].FG).To(MatchRegexp(`^#[0-9a-f]{6}$`), "%s: %s", name, label)
+			}
+			Expect(builtIn.Styles["error"].BG).To(MatchRegexp(`^#[0-9a-f]{6}$`), name)
+		}
 
 		first, ok := theme.Builtin("monokai")
 		Expect(ok).To(BeTrue())
@@ -70,12 +94,12 @@ var _ = Describe("Theme loading", func() {
 		Expect(ok).To(BeFalse())
 	})
 
-	It("uses a red background only for the error style in the default theme", func() {
+	It("uses an error background only for the error style in the default theme", func() {
 		th := theme.Default()
 
 		for name, style := range th.Styles {
 			if name == "error" {
-				Expect(style.BG).To(Equal("red"))
+				Expect(style.BG).To(Equal("#f92672"))
 				continue
 			}
 			Expect(style.BG).To(BeEmpty())
@@ -87,24 +111,24 @@ var _ = Describe("Theme loading", func() {
 
 		style, ok := th.Resolve("error")
 		Expect(ok).To(BeTrue())
-		Expect(style.FG).To(Equal("white"))
-		Expect(style.BG).To(Equal("red"))
+		Expect(style.FG).To(Equal("#f8f8f2"))
+		Expect(style.BG).To(Equal("#f92672"))
 
 		style, ok = th.Resolve("process")
 		Expect(ok).To(BeTrue())
-		Expect(style.FG).To(Equal("orange"))
+		Expect(style.FG).To(Equal("#e6db74"))
 
 		style, ok = th.Resolve("bool-true")
 		Expect(ok).To(BeTrue())
-		Expect(style.FG).To(Equal("green"))
+		Expect(style.FG).To(Equal("#a6e22e"))
 
 		style, ok = th.Resolve("bool-false")
 		Expect(ok).To(BeTrue())
-		Expect(style.FG).To(Equal("red"))
+		Expect(style.FG).To(Equal("#f92672"))
 
 		style, ok = th.Resolve("endpoint")
 		Expect(ok).To(BeTrue())
-		Expect(style.FG).To(Equal("orange"))
+		Expect(style.FG).To(Equal("#819aff"))
 	})
 
 	It("overlays custom styles while retaining Monokai fallbacks", func() {

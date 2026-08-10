@@ -52,7 +52,7 @@ var _ = Describe("ANSI renderer", func() {
 			}},
 		})
 
-		Expect(output).To(ContainSubstring(";41m"))
+		Expect(output).To(ContainSubstring(";48;2;249;38;114m"))
 	})
 
 	It("renders exact truecolor foregrounds and backgrounds", func() {

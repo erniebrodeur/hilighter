@@ -1,39 +1,39 @@
 styles:
   accent:
-    fg: cyan
+    fg: "#66d9ef"
     bold: true
   bool-false:
-    fg: red
+    fg: "#f92672"
     bold: true
   bool-true:
-    fg: green
+    fg: "#a6e22e"
     bold: true
   detail:
-    fg: white
+    fg: "#f8f8f2"
   endpoint:
-    fg: orange
+    fg: "#819aff"
     bold: true
   error:
-    fg: white
-    bg: red
+    fg: "#f8f8f2"
+    bg: "#f92672"
     bold: true
   host:
-    fg: green
+    fg: "#a6e22e"
     bold: true
   info:
-    fg: cyan
+    fg: "#66d9ef"
     bold: true
   notice:
-    fg: cyan
+    fg: "#66d9ef"
   process:
-    fg: orange
+    fg: "#e6db74"
     bold: true
   repeat:
-    fg: magenta
+    fg: "#ae81ff"
   test-name:
-    fg: green
+    fg: "#a6e22e"
   timestamp:
-    fg: gray
+    fg: "#88846f"
   warning:
-    fg: yellow
+    fg: "#e6db74"
     bold: true

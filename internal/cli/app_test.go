@@ -49,6 +49,17 @@ var _ = Describe("resolveOptions", func() {
 		Expect(rulesPath).To(BeEmpty())
 		Expect(themePath).To(Equal("monokai"))
 	})
+
+	It("resolves every shipped theme without treating its slug as a file", func() {
+		dir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(dir, "rules.yaml"), nil, 0o644)).To(Succeed())
+		Expect(os.WriteFile(filepath.Join(dir, "config.yaml"), []byte("theme: dark-plus\n"), 0o644)).To(Succeed())
+
+		_, themePath, err := resolveOptions(Options{}, dir)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(themePath).To(Equal("dark-plus"))
+	})
 })
 
 var _ = Describe("run", func() {

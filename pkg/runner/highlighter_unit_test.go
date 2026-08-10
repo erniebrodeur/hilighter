@@ -24,8 +24,19 @@ func TestHighlighterSelectsBuiltInThemeByName(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer highlighter.Close()
-	if output := highlighter.ProcessLine("ERROR"); !strings.Contains(output, ";41m") {
+	if output := highlighter.ProcessLine("ERROR"); !strings.Contains(output, ";48;2;249;38;114m") {
 		t.Fatalf("expected named Monokai error styling, got %q", output)
+	}
+}
+
+func TestHighlighterSelectsAnotherBuiltInThemeByName(t *testing.T) {
+	highlighter, err := NewHighlighter("", "dark-plus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer highlighter.Close()
+	if output := highlighter.ProcessLine("ERROR"); !strings.Contains(output, ";48;2;244;71;71m") {
+		t.Fatalf("expected Dark+ error styling, got %q", output)
 	}
 }
 
