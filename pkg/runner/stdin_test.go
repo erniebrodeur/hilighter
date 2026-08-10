@@ -36,6 +36,49 @@ var _ = Describe("RunStdin", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(output.String()).To(ContainSubstring("\x1b["))
 	})
+
+	It("preserves existing ANSI sequences while adding highlights", func() {
+		rulesPath := filepath.Join(GinkgoT().TempDir(), "rules.yaml")
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
+		highlighter, err := runner.NewHighlighter(rulesPath, "")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(highlighter.Close)
+		var output bytes.Buffer
+		input := "\x1b[32malready green\x1b[0m ERROR\n"
+
+		err = runner.RunStdin(bytes.NewBufferString(input), &output, highlighter)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(output.String()).To(ContainSubstring("\x1b[32malready green\x1b[0m"))
+		Expect(output.String()).To(ContainSubstring(";41mERROR\x1b[0m"))
+	})
+
+	It("preserves ANSI sequences through a streaming pipeline", func() {
+		rulesPath := filepath.Join(GinkgoT().TempDir(), "rules.yaml")
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: error\n    pattern: 'ERROR'\n    style: error\n"), 0o644)).To(Succeed())
+		highlighter, err := runner.NewHighlighter(rulesPath, "")
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(highlighter.Close)
+		pipeReader, pipeWriter := io.Pipe()
+		var output bytes.Buffer
+		input := "\x1b[36mcyan\x1b[0m ERROR\n"
+		writeDone := make(chan error, 1)
+		go func() {
+			_, err := io.WriteString(pipeWriter, input)
+			if closeErr := pipeWriter.Close(); err == nil {
+				err = closeErr
+			}
+			writeDone <- err
+		}()
+
+		err = runner.RunStdin(pipeReader, &output, highlighter)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(<-writeDone).NotTo(HaveOccurred())
+		Expect(output.String()).To(ContainSubstring("\x1b[36mcyan\x1b[0m"))
+		Expect(output.String()).To(ContainSubstring(";41mERROR\x1b[0m"))
+		Expect(output.String()).NotTo(Equal(input))
+	})
 })
 
 var _ = Describe("RunInputs", func() {

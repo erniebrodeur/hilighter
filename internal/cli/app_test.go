@@ -2,10 +2,12 @@ package cli
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -102,8 +104,24 @@ var _ = Describe("run", func() {
 		err := run([]string{missing}, strings.NewReader("ignored"), io.Discard, &stderr, GinkgoT().TempDir())
 
 		Expect(err).To(HaveOccurred())
-		Expect(ErrorReported(err)).To(BeTrue())
+		Expect(SuppressError(err)).To(BeTrue())
 		Expect(stderr.String()).To(ContainSubstring(missing))
+	})
+
+	It("silences only broken-pipe output errors", func() {
+		err := run(nil, strings.NewReader("plain text\n"), errorWriter{err: syscall.EPIPE}, io.Discard, GinkgoT().TempDir())
+
+		Expect(errors.Is(err, syscall.EPIPE)).To(BeTrue())
+		Expect(SuppressError(err)).To(BeTrue())
+	})
+
+	It("does not silence ordinary output errors", func() {
+		writeErr := errors.New("write failed")
+
+		err := run(nil, strings.NewReader("plain text\n"), errorWriter{err: writeErr}, io.Discard, GinkgoT().TempDir())
+
+		Expect(errors.Is(err, writeErr)).To(BeTrue())
+		Expect(SuppressError(err)).To(BeFalse())
 	})
 })
 
@@ -114,4 +132,12 @@ type countingReader struct {
 func (reader *countingReader) Read([]byte) (int, error) {
 	reader.reads++
 	return 0, io.EOF
+}
+
+type errorWriter struct {
+	err error
+}
+
+func (writer errorWriter) Write([]byte) (int, error) {
+	return 0, writer.err
 }

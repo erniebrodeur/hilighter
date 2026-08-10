@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/erniebrodeur/hilighter/pkg/config"
 	"github.com/erniebrodeur/hilighter/pkg/runner"
@@ -19,10 +20,12 @@ type reportedError struct {
 func (e *reportedError) Error() string { return e.err.Error() }
 func (e *reportedError) Unwrap() error { return e.err }
 
-// ErrorReported reports whether an error was already written to stderr.
-func ErrorReported(err error) bool {
+// SuppressError reports whether main should exit without printing an error.
+// Input errors have already been reported, while a downstream broken pipe is
+// intentionally quiet. Both still produce a nonzero exit status.
+func SuppressError(err error) bool {
 	var reported *reportedError
-	return errors.As(err, &reported)
+	return errors.As(err, &reported) || errors.Is(err, syscall.EPIPE)
 }
 
 // Main is the top-level CLI entrypoint.
