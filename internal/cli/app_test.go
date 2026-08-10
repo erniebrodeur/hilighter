@@ -23,7 +23,7 @@ var _ = Describe("resolveOptions", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rulesPath).To(BeEmpty())
-		Expect(themePath).To(BeEmpty())
+		Expect(themePath).To(Equal("monokai"))
 	})
 
 	It("uses non-empty user rules and the configured relative theme", func() {
@@ -47,7 +47,7 @@ var _ = Describe("resolveOptions", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rulesPath).To(BeEmpty())
-		Expect(themePath).To(BeEmpty())
+		Expect(themePath).To(Equal("monokai"))
 	})
 })
 

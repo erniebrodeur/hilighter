@@ -2,6 +2,7 @@ package ansi
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/erniebrodeur/hilighter/pkg/theme"
@@ -43,25 +44,38 @@ func sequence(style theme.Style) string {
 		parts = append(parts, "1")
 	}
 
-	if code, ok := fgColors[strings.ToLower(style.FG)]; ok {
-		if code < 100 {
-			parts = append(parts, fmt.Sprintf("%d", code))
-		} else {
-			parts = append(parts, fmt.Sprintf("38;5;%d", code))
-		}
-	}
-
-	if code, ok := bgColors[strings.ToLower(style.BG)]; ok {
-		if code < 100 {
-			parts = append(parts, fmt.Sprintf("%d", code))
-		} else {
-			parts = append(parts, fmt.Sprintf("48;5;%d", code))
-		}
-	}
+	parts = append(parts, colorParts(style.FG, fgColors, "38")...)
+	parts = append(parts, colorParts(style.BG, bgColors, "48")...)
 
 	if len(parts) == 0 {
 		return ""
 	}
 
 	return "\x1b[" + strings.Join(parts, ";") + "m"
+}
+
+func colorParts(value string, named map[string]int, extendedPrefix string) []string {
+	if red, green, blue, ok := parseHexColor(value); ok {
+		return []string{extendedPrefix, "2", strconv.Itoa(red), strconv.Itoa(green), strconv.Itoa(blue)}
+	}
+
+	code, ok := named[strings.ToLower(value)]
+	if !ok {
+		return nil
+	}
+	if code < 100 {
+		return []string{fmt.Sprintf("%d", code)}
+	}
+	return []string{extendedPrefix, "5", fmt.Sprintf("%d", code)}
+}
+
+func parseHexColor(value string) (red, green, blue int, ok bool) {
+	if len(value) != 7 || value[0] != '#' {
+		return 0, 0, 0, false
+	}
+	parsed, err := strconv.ParseUint(value[1:], 16, 24)
+	if err != nil {
+		return 0, 0, 0, false
+	}
+	return int(parsed >> 16), int(parsed >> 8 & 0xff), int(parsed & 0xff), true
 }

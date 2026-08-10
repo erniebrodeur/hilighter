@@ -35,6 +35,8 @@ Rule sources replace rather than merge. Precedence is repeated `-e`, a non-empty
 
 Theme precedence is `-t`, the selector in `~/.hilighter/config.yaml`, then compiled Monokai. Relative theme paths resolve from `~/.hilighter`. Custom themes overlay Monokai.
 
+Built-in themes are selected through stable lowercase slugs in `pkg/theme`. Registry lookups return defensive copies. Theme colors support existing named colors and exact `#RRGGBB` values rendered as ANSI truecolor.
+
 First run creates `config.yaml` containing only `theme: monokai`, an empty `rules.yaml`, and an empty `themes/` directory. Compiled defaults are not copied into the user directory. Legacy config and rule metadata are rejected rather than migrated.
 
 ## Package ownership

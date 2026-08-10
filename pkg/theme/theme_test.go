@@ -53,6 +53,23 @@ var _ = Describe("Theme loading", func() {
 		Expect(th.Styles["info"].Bold).To(BeTrue())
 	})
 
+	It("registers Monokai as an isolated built-in theme", func() {
+		Expect(theme.BuiltinNames()).To(Equal([]string{"monokai"}))
+
+		first, ok := theme.Builtin("monokai")
+		Expect(ok).To(BeTrue())
+		first.Styles["error"] = theme.Style{FG: "green"}
+
+		second, ok := theme.Builtin("monokai")
+		Expect(ok).To(BeTrue())
+		Expect(second.Styles["error"]).To(Equal(theme.Default().Styles["error"]))
+	})
+
+	It("rejects unknown built-in theme names", func() {
+		_, ok := theme.Builtin("missing")
+		Expect(ok).To(BeFalse())
+	})
+
 	It("uses a red background only for the error style in the default theme", func() {
 		th := theme.Default()
 

@@ -38,7 +38,9 @@ func NewHighlighterWithExpressions(expressions []string, rulesPath, themePath st
 	}
 
 	th := theme.Default()
-	if themePath != "" && themePath != "monokai" {
+	if builtin, ok := theme.Builtin(themePath); ok {
+		th = builtin
+	} else if themePath != "" {
 		custom, loadErr := theme.Load(themePath)
 		err = loadErr
 		if err != nil {

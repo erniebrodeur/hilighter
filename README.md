@@ -121,7 +121,7 @@ Set the theme in `config.yaml` using a path relative to `~/.hilighter`:
 theme: themes/custom.yaml
 ```
 
-Supported color names are `black`, `blue`, `cyan`, `gray`, `green`, `magenta`, `orange`, `pink`, `red`, `white`, and `yellow`. See [examples/themes/default.yaml](examples/themes/default.yaml) for a complete theme.
+Colors may be exact `#RRGGBB` truecolor values or the names `black`, `blue`, `cyan`, `gray`, `green`, `magenta`, `orange`, `pink`, `red`, `white`, and `yellow`. See [examples/themes/default.yaml](examples/themes/default.yaml) for a complete theme.
 
 Rule-source precedence is repeated `-e`, then a non-empty `~/.hilighter/rules.yaml`, then shipped rules. Theme precedence is `-t`, then `config.yaml`, then compiled Monokai.
 

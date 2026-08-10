@@ -55,6 +55,21 @@ var _ = Describe("ANSI renderer", func() {
 		Expect(output).To(ContainSubstring(";41m"))
 	})
 
+	It("renders exact truecolor foregrounds and backgrounds", func() {
+		renderer := ansi.New(theme.Theme{Styles: map[string]theme.Style{
+			"error": {FG: "#1e90ff", BG: "#A020F0", Bold: true},
+		}})
+
+		output := renderer.Render(engine.Result{
+			Line: "ERROR",
+			Spans: []engine.Span{{
+				Start: 0, End: 5, Label: "error",
+			}},
+		})
+
+		Expect(output).To(Equal("\x1b[1;38;2;30;144;255;48;2;160;32;240mERROR\x1b[0m"))
+	})
+
 	It("leaves unmatched text untouched", func() {
 		renderer := ansi.New(theme.Default())
 

@@ -11,6 +11,7 @@ import (
 
 	"github.com/erniebrodeur/hilighter/pkg/config"
 	"github.com/erniebrodeur/hilighter/pkg/runner"
+	"github.com/erniebrodeur/hilighter/pkg/theme"
 )
 
 type reportedError struct {
@@ -86,9 +87,8 @@ func resolveOptions(opts Options, configDir string) (rulesPath, themePath string
 			return "", "", err
 		}
 	}
-	if themePath == "monokai" {
-		themePath = ""
-	} else if themePath != "" && !filepath.IsAbs(themePath) {
+	_, isBuiltin := theme.Builtin(themePath)
+	if themePath != "" && !isBuiltin && !filepath.IsAbs(themePath) {
 		themePath = filepath.Join(configDir, themePath)
 	}
 	return rulesPath, themePath, nil
