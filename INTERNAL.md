@@ -70,4 +70,4 @@ Also exercise a real ANSI-preserving pipeline and a downstream pipe closure. The
 
 Git staging, commits, tags, and pushes are separate maintainer actions.
 
-`.github/workflows/test.yml` enforces formatting, vetting, and tests on pushes and pull requests. `.github/workflows/release.yml` runs vet and tests for `v*` tags, requires the tag to equal `v` plus `internal/cli.Version`, and creates a GitHub Release with generated notes. It intentionally publishes no binary artifacts; installation remains the standard Go module flow.
+`.github/workflows/test.yml` enforces formatting, vetting, and tests on pushes and pull requests. `.github/workflows/release.yml` runs only after Test succeeds for a repository-owned `v*` tag push, verifies the tag, tested commit, and `internal/cli.Version` agree, then creates a GitHub Release with generated notes. It intentionally publishes no binary artifacts; installation remains the standard Go module flow.

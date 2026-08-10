@@ -101,7 +101,7 @@ var _ = Describe("run", func() {
 		err := run([]string{"--version"}, input, &stdout, io.Discard, GinkgoT().TempDir())
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stdout.String()).To(Equal("hilighter-1.0.0\n"))
+		Expect(stdout.String()).To(Equal("hilighter-" + Version + "\n"))
 		Expect(input.reads).To(BeZero())
 	})
 
