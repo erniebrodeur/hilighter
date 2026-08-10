@@ -89,4 +89,15 @@ var _ = Describe("Theme loading", func() {
 		Expect(ok).To(BeTrue())
 		Expect(style.FG).To(Equal("orange"))
 	})
+
+	It("overlays custom styles while retaining Monokai fallbacks", func() {
+		custom := theme.Theme{Styles: map[string]theme.Style{
+			"error": {FG: "green"},
+		}}
+
+		merged := theme.Overlay(theme.Default(), custom)
+
+		Expect(merged.Styles["error"]).To(Equal(theme.Style{FG: "green"}))
+		Expect(merged.Styles["warning"]).To(Equal(theme.Default().Styles["warning"]))
+	})
 })

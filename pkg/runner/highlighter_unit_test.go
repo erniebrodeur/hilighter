@@ -22,6 +22,39 @@ func TestHighlighterProcessLineForBuiltInSyslog(t *testing.T) {
 	}
 }
 
+func TestHighlighterUsesDefaultRulesWithoutAnotherSource(t *testing.T) {
+	highlighter, err := NewHighlighter("", "", "")
+	if err != nil {
+		t.Fatalf("new highlighter: %v", err)
+	}
+	defer highlighter.Close()
+
+	if output := highlighter.ProcessLine("ERROR"); !containsANSI(output) {
+		t.Fatalf("expected default ERROR highlighting in %q", output)
+	}
+}
+
+func TestHighlighterExpressionsReplaceDefaultRules(t *testing.T) {
+	highlighter, err := NewHighlighterWithExpressions([]string{"CUSTOM"}, "", "", "")
+	if err != nil {
+		t.Fatalf("new highlighter: %v", err)
+	}
+	defer highlighter.Close()
+
+	if output := highlighter.ProcessLine("CUSTOM"); !containsANSI(output) {
+		t.Fatalf("expected expression highlighting in %q", output)
+	}
+	if output := highlighter.ProcessLine("ERROR"); containsANSI(output) {
+		t.Fatalf("did not expect default highlighting in %q", output)
+	}
+}
+
+func TestHighlighterRejectsEmptyExpression(t *testing.T) {
+	if _, err := NewHighlighterWithExpressions([]string{""}, "", "", ""); err == nil {
+		t.Fatal("expected empty expression error")
+	}
+}
+
 func TestHighlighterProcessLineForBuiltInDocker(t *testing.T) {
 	highlighter, err := NewHighlighter("", "docker", "")
 	if err != nil {

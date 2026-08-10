@@ -59,6 +59,17 @@ var _ = Describe("parseOptions", func() {
 		Expect(opts.ConfigDir).To(Equal("/tmp/custom"))
 	})
 
+	It("parses repeated expressions and the short theme flag", func() {
+		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
+		os.Args = []string{"hilighter", "-e", "ERROR", "-e", "WARN", "-t", "themes/custom.yaml"}
+
+		opts, err := parseOptions()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Expressions).To(Equal([]string{"ERROR", "WARN"}))
+		Expect(opts.ThemePath).To(Equal("themes/custom.yaml"))
+	})
+
 	It("parses the tail subcommand with profile and optional file path", func() {
 		GinkgoT().Setenv("HOME", "/tmp/hilighter-home")
 		os.Args = []string{"hilighter", "tail", "rails-log", "log/development.log"}

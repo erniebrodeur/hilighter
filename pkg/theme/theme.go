@@ -47,3 +47,16 @@ func (t Theme) Resolve(label string) (Style, bool) {
 	style, ok := t.Styles[label]
 	return style, ok
 }
+
+// Overlay returns a theme that uses override styles when present and falls
+// back to base for every other semantic label.
+func Overlay(base, override Theme) Theme {
+	styles := make(map[string]Style, len(base.Styles)+len(override.Styles))
+	for name, style := range base.Styles {
+		styles[name] = style
+	}
+	for name, style := range override.Styles {
+		styles[name] = style
+	}
+	return Theme{Styles: styles}
+}

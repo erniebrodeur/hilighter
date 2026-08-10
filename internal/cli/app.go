@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,6 +29,9 @@ func Main() error {
 		}
 		return err
 	}
+	if err := config.EnsureLayout(opts.ConfigDir); err != nil {
+		return err
+	}
 
 	mode := stdinMode(os.Stdin)
 	if opts.ShowVersion {
@@ -50,7 +54,7 @@ func Main() error {
 		_, _ = fmt.Fprintf(os.Stderr, "detect: %s\n", resolved.DetectionNote)
 	}
 
-	highlighter, err := runner.NewHighlighter(resolved.RulesPath, resolved.App, resolved.ThemePath)
+	highlighter, err := runner.NewHighlighterWithExpressions(resolved.Expressions, resolved.RulesPath, resolved.App, resolved.ThemePath)
 	if err != nil {
 		return err
 	}
@@ -70,6 +74,7 @@ func shouldShowHelp(opts Options, mode fs.FileMode) bool {
 		opts.App == "" &&
 		opts.RulesPath == "" &&
 		opts.ThemePath == "" &&
+		len(opts.Expressions) == 0 &&
 		opts.Command == "" &&
 		opts.FilePath == "" &&
 		mode&os.ModeCharDevice != 0
@@ -138,9 +143,21 @@ func isControlMode(mode string) bool {
 }
 
 func resolveOptions(opts Options) (Options, error) {
-	cfg, _, err := loadConfigIfPresent(opts.ConfigDir)
-	if err != nil {
+	if opts.ConfigDir == "" {
+		opts.ConfigDir = config.DefaultDir()
+	}
+	if err := config.EnsureLayout(opts.ConfigDir); err != nil {
 		return Options{}, err
+	}
+
+	cfg := config.Config{}
+	legacyConfig := opts.Profile != "" || isFileMode(opts.Mode)
+	if legacyConfig {
+		loaded, _, err := loadConfigIfPresent(opts.ConfigDir)
+		if err != nil {
+			return Options{}, err
+		}
+		cfg = loaded
 	}
 
 	if opts.Profile != "" {
@@ -186,11 +203,35 @@ func resolveOptions(opts Options) (Options, error) {
 		}
 	}
 
-	if opts.RulesPath == "" {
-		opts.RulesPath = cfg.RulesPath
+	if len(opts.Expressions) > 0 {
+		opts.RulesPath = ""
+		opts.App = ""
+	} else if opts.RulesPath == "" && opts.App == "" && opts.Profile == "" && !isFileMode(opts.Mode) {
+		userRulesPath := config.DefaultRulesPath(opts.ConfigDir)
+		nonEmpty, readErr := fileHasContent(userRulesPath)
+		if readErr != nil {
+			return Options{}, readErr
+		}
+		if nonEmpty {
+			opts.RulesPath = userRulesPath
+		}
 	}
 	if opts.ThemePath == "" {
-		opts.ThemePath = cfg.ThemePath
+		if legacyConfig {
+			opts.ThemePath = cfg.ThemePath
+		} else {
+			configuredTheme, loadErr := config.LoadTheme(filepath.Join(opts.ConfigDir, "config.yaml"))
+			if loadErr != nil {
+				return Options{}, loadErr
+			}
+			opts.ThemePath = configuredTheme
+		}
+	}
+
+	if opts.ThemePath == "monokai" {
+		opts.ThemePath = ""
+	} else if opts.ThemePath != "" && !filepath.IsAbs(opts.ThemePath) {
+		opts.ThemePath = filepath.Join(opts.ConfigDir, opts.ThemePath)
 	}
 
 	if isFileMode(opts.Mode) {
@@ -222,7 +263,7 @@ func resolveOptions(opts Options) (Options, error) {
 		return opts, nil
 	}
 
-	if opts.Command == "" {
+	if opts.Command == "" && len(opts.Expressions) == 0 {
 		if opts.RulesPath != "" {
 			ruleFile, err := rules.Load(opts.RulesPath)
 			if err != nil {
@@ -239,6 +280,14 @@ func resolveOptions(opts Options) (Options, error) {
 	}
 
 	return opts, nil
+}
+
+func fileHasContent(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	return len(bytes.TrimSpace(data)) > 0, nil
 }
 
 func loadConfigIfPresent(configDir string) (config.Config, bool, error) {

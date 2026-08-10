@@ -13,6 +13,82 @@ import (
 )
 
 var _ = Describe("resolveOptions", func() {
+	It("creates the customization layout and uses compiled defaults", func() {
+		configDir := filepath.Join(GinkgoT().TempDir(), ".hilighter")
+
+		opts, err := resolveOptions(Options{ConfigDir: configDir})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.RulesPath).To(BeEmpty())
+		info, err := os.Stat(filepath.Join(configDir, "rules.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.Size()).To(BeZero())
+		info, err = os.Stat(filepath.Join(configDir, "themes"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(info.IsDir()).To(BeTrue())
+		configData, err := os.ReadFile(filepath.Join(configDir, "config.yaml"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(configData)).To(Equal("theme: monokai\n"))
+	})
+
+	It("loads the configured theme during normal filter processing", func() {
+		configDir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("theme: themes/custom.yaml\n"), 0o644)).To(Succeed())
+
+		opts, err := resolveOptions(Options{ConfigDir: configDir})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.RulesPath).To(BeEmpty())
+		Expect(opts.ThemePath).To(Equal(filepath.Join(configDir, "themes", "custom.yaml")))
+	})
+
+	It("prefers the command-line theme over config", func() {
+		configDir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte("theme: themes/configured.yaml\n"), 0o644)).To(Succeed())
+
+		opts, err := resolveOptions(Options{ConfigDir: configDir, ThemePath: "themes/explicit.yaml"})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.ThemePath).To(Equal(filepath.Join(configDir, "themes", "explicit.yaml")))
+	})
+
+	It("selects non-empty user rules when no expression is provided", func() {
+		configDir := GinkgoT().TempDir()
+		rulesPath := filepath.Join(configDir, "rules.yaml")
+		Expect(os.WriteFile(rulesPath, []byte("rules:\n  - name: custom\n    pattern: CUSTOM\n    style: accent\n"), 0o644)).To(Succeed())
+
+		opts, err := resolveOptions(Options{ConfigDir: configDir})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.RulesPath).To(Equal(rulesPath))
+	})
+
+	It("lets expressions replace user rules and resolves relative themes from the customization root", func() {
+		configDir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(configDir, "rules.yaml"), []byte("rules:\n  - name: custom\n    pattern: CUSTOM\n"), 0o644)).To(Succeed())
+
+		opts, err := resolveOptions(Options{
+			ConfigDir:   configDir,
+			Expressions: []string{"ERROR"},
+			ThemePath:   "themes/custom.yaml",
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.Expressions).To(Equal([]string{"ERROR"}))
+		Expect(opts.RulesPath).To(BeEmpty())
+		Expect(opts.ThemePath).To(Equal(filepath.Join(configDir, "themes", "custom.yaml")))
+	})
+
+	It("resolves the built-in Monokai theme without a file", func() {
+		opts, err := resolveOptions(Options{
+			ConfigDir: GinkgoT().TempDir(),
+			ThemePath: "monokai",
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(opts.ThemePath).To(BeEmpty())
+	})
+
 	It("uses the built-in app command when --cmd is not provided", func() {
 		opts, err := resolveOptions(Options{
 			App:       "syslog",

@@ -32,6 +32,8 @@ type Options struct {
 	RulesPath string
 	// ThemePath points at a YAML file containing theme style definitions.
 	ThemePath string
+	// Expressions are repeated command-line PCRE rules in precedence order.
+	Expressions []string
 	// Command is an optional shell command to execute instead of reading stdin.
 	Command string
 	// FilePath points at a file target for modes such as `tail`, `cat`, or `head`.
@@ -52,6 +54,8 @@ func parseOptions() (Options, error) {
 	flag.StringVar(&opts.App, "app", "", "built-in app profile to use (for example: syslog)")
 	flag.StringVar(&opts.RulesPath, "rules", "", "path to a rules YAML file")
 	flag.StringVar(&opts.ThemePath, "theme", "", "path to a theme YAML file")
+	flag.StringVar(&opts.ThemePath, "t", "", "built-in theme name or path under ~/.hilighter")
+	flag.Var((*expressionsFlag)(&opts.Expressions), "e", "PCRE expression to highlight (repeatable)")
 	flag.StringVar(&opts.Command, "cmd", "", "command to execute and stream through hilighter")
 	flag.StringVar(&opts.ConfigDir, "config-dir", config.DefaultDir(), "config directory (default: ~/.hilighter)")
 	flag.BoolVar(&opts.NoDetect, "no-detect", false, "disable file-mode auto-detection")
@@ -121,6 +125,17 @@ func parseOptions() (Options, error) {
 	}
 
 	return opts, nil
+}
+
+type expressionsFlag []string
+
+func (values *expressionsFlag) String() string {
+	return ""
+}
+
+func (values *expressionsFlag) Set(value string) error {
+	*values = append(*values, value)
+	return nil
 }
 
 func isFileMode(mode string) bool {
