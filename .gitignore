@@ -6,7 +6,7 @@ docker-samples/
 tmp/
 
 # Binaries and build output
-hilighter
+/hilighter
 hilighter-*
 *.bin
 *.app

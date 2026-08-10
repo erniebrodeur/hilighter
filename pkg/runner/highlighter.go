@@ -17,18 +17,17 @@ type Highlighter struct {
 
 // NewHighlighter loads rules and theme data for stream processing.
 //
-// If themePath is empty, the built-in default theme is used. If neither a rule
-// path nor built-in app profile is selected, the built-in default rules are
-// used.
-func NewHighlighter(rulesPath, appName, themePath string) (*Highlighter, error) {
-	return NewHighlighterWithExpressions(nil, rulesPath, appName, themePath)
+// If themePath is empty, the built-in default theme is used. If rulesPath is
+// empty, the built-in default rules are used.
+func NewHighlighter(rulesPath, themePath string) (*Highlighter, error) {
+	return NewHighlighterWithExpressions(nil, rulesPath, themePath)
 }
 
-// NewHighlighterWithExpressions resolves expression, file, and built-in rule
-// sources in precedence order. Repeated expressions replace every other rule
-// source and use the accent style.
-func NewHighlighterWithExpressions(expressions []string, rulesPath, appName, themePath string) (*Highlighter, error) {
-	ruleFile, err := resolveRuleFile(expressions, rulesPath, appName)
+// NewHighlighterWithExpressions resolves expression and file rule sources in
+// precedence order. Repeated expressions replace every other rule source and
+// use the accent style.
+func NewHighlighterWithExpressions(expressions []string, rulesPath, themePath string) (*Highlighter, error) {
+	ruleFile, err := resolveRuleFile(expressions, rulesPath)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +54,7 @@ func NewHighlighterWithExpressions(expressions []string, rulesPath, appName, the
 	}, nil
 }
 
-func resolveRuleFile(expressions []string, rulesPath, appName string) (rules.File, error) {
+func resolveRuleFile(expressions []string, rulesPath string) (rules.File, error) {
 	if len(expressions) > 0 {
 		file := rules.File{Rules: make([]rules.Spec, 0, len(expressions))}
 		for i, pattern := range expressions {
@@ -75,14 +74,6 @@ func resolveRuleFile(expressions []string, rulesPath, appName string) (rules.Fil
 		file, err := rules.Load(rulesPath)
 		if err != nil {
 			return rules.File{}, err
-		}
-		return file, nil
-	}
-
-	if appName != "" {
-		file, ok := rules.Builtin(appName)
-		if !ok {
-			return rules.File{}, rules.ErrUnknownBuiltin(appName)
 		}
 		return file, nil
 	}
